@@ -123,7 +123,7 @@ test("serializes a feed that round-trips through the parser", () => {
     organizer: "Japan Society",
     categories: ["AI", "Design"],
     language: "en",
-    sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b" }],
+    sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b", platform: "tribe" }],
   };
 
   const ics = eventsToIcs([event], {
@@ -141,7 +141,7 @@ test("serializes a feed that round-trips through the parser", () => {
   assert.ok(
     parsed[0]?.description?.startsWith("Line one\nLine two, with a comma; and a semicolon."),
   );
-  assert.ok(parsed[0]?.description?.includes("Source: Japan Society"));
+  assert.ok(parsed[0]?.description?.includes("Japan Society"));
   assert.equal(parsed[0]?.location, event.location);
   assert.equal(parsed[0]?.start.toISOString(), start.toISOString());
   assert.equal(parsed[0]?.uid, event.id);

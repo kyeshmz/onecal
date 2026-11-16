@@ -7,7 +7,6 @@ import { applyQueryFilters, readQueryFilters } from "./filters.js";
 import { eventsToIcs } from "./ics/serialize.js";
 import { languageCounts } from "./languages.js";
 import type { CalendarEvent, Config } from "./types.js";
-
 const WEB_DIR = resolve(import.meta.dirname, "..", "web");
 const PORT = Number(process.env.PORT ?? 3000);
 const TTL_SECONDS = 900;
@@ -40,6 +39,19 @@ try {
 
 const aggregator = new Aggregator(config);
 
+const refreshSeconds = config.refreshIntervalSeconds ?? 300;
+if (refreshSeconds > 0) {
+  const refresh = (): void => {
+    void aggregator.getSnapshot({ force: true }).catch((error) => {
+      console.error("[onecal] background refresh failed", error);
+    });
+  };
+
+  void refresh();
+  const timer = setInterval(refresh, refreshSeconds * 1000);
+  timer.unref();
+}
+
 async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   const method = request.method ?? "GET";
@@ -64,6 +76,7 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
       {
         generatedAt: snapshot.generatedAt.toISOString(),
         count: events.length,
+        excludedCount: snapshot.excludedCount,
         languages: languageCounts(events),
         sources: snapshot.sources,
         watchlist: config.watchlist ?? [],
@@ -82,6 +95,7 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
       {
         generatedAt: snapshot.generatedAt.toISOString(),
         sources: snapshot.sources,
+        excludedCount: snapshot.excludedCount,
         watchlist: config.watchlist ?? [],
         languages: languageCounts(snapshot.events),
       },
@@ -192,6 +206,9 @@ server.listen(PORT, () => {
       .map((source) => source.label)
       .join(", ")}`,
   );
+  if (refreshSeconds > 0) {
+    console.log(`[onecal] auto-refresh every ${refreshSeconds}s`);
+  }
 });
 
 export { server };

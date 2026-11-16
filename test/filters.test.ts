@@ -19,7 +19,7 @@ function event(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     status: "CONFIRMED",
     categories: ["AI"],
     language: "en",
-    sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b" }],
+    sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b", platform: "tribe" }],
     ...overrides,
   };
 }
@@ -49,7 +49,7 @@ test("filters by source, language and free text", () => {
       id: "onecal-2@onecal",
       title: "新年会のご案内",
       language: "ja",
-      sources: [{ id: "keizai", label: "Keizai", color: "#1f6f5c" }],
+      sources: [{ id: "keizai", label: "Keizai", color: "#1f6f5c", platform: "luma" }],
     }),
   ];
 

@@ -70,6 +70,11 @@ test("merges the same event from two sources", async () => {
   assert.deepEqual(merged?.categories.sort(), ["AI", "Design"]);
   assert.match(merged?.id ?? "", /^onecal-[0-9a-f]{20}@onecal$/);
   assert.equal(merged?.language, "en");
+  assert.deepEqual(
+    merged?.sources.map((source) => source.platform),
+    ["ics", "ics"],
+  );
+  assert.equal(snapshot.excludedCount, 0);
 });
 
 test("keeps separate events with incompatible venues", async () => {
@@ -185,6 +190,48 @@ test("backs off after a failed refresh", async () => {
 
   await aggregator.getSnapshot();
   assert.equal(calls, 2, "should not hammer a failing source on every request");
+});
+
+test("drops members-only events and counts them", async () => {
+  const aggregator = new Aggregator(config(), {
+    now: () => NOW,
+    loader: async (source) =>
+      source.id === "a"
+        ? [
+            event({ uid: "members-1", title: "Weekly Circle - Members Only" }),
+            event({ uid: "members-2", title: "新年会（会員限定）", start: new Date("2026-11-19T19:00:00Z"), end: new Date("2026-11-19T21:00:00Z") }),
+            event({
+              uid: "members-3",
+              title: "JCCNC Seminar",
+              description: "（Exclusive to JCCNC Members）",
+              start: new Date("2026-11-20T19:00:00Z"),
+              end: new Date("2026-11-20T21:00:00Z"),
+            }),
+          ]
+        : [event({ sourceId: "b", uid: "public-1", title: "AI Night" })],
+  });
+
+  const snapshot = await aggregator.getSnapshot();
+  assert.deepEqual(snapshot.events.map((entry) => entry.title), ["AI Night"]);
+  assert.equal(snapshot.excludedCount, 3);
+});
+
+test("force refresh bypasses the TTL", async () => {
+  let calls = 0;
+  const aggregator = new Aggregator(config({ sources: [{ id: "a", label: "A", type: "ics", url: "https://a.example/feed.ics" }] }), {
+    now: () => NOW,
+    loader: async () => {
+      calls += 1;
+      return [event()];
+    },
+  });
+
+  await aggregator.getSnapshot();
+  await aggregator.getSnapshot();
+  assert.equal(calls, 1);
+
+  await aggregator.getSnapshot({ force: true });
+  assert.equal(calls, 2);
 });
 
 test("reports a total outage as unhealthy", async () => {

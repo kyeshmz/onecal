@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { applyContentFilters, buildExcludeKeywords } from "./content-filters.js";
 import { applyLanguageFilter, detectEventLanguage } from "./languages.js";
 import { expandSourceEvents } from "./recur.js";
 import { describeError } from "./sources/fetch.js";
@@ -23,6 +24,11 @@ export interface AggregatorOptions {
   now?: () => Date;
   /** Injection point for tests. */
   loader?: SourceLoader;
+}
+
+export interface SnapshotOptions {
+  /** Skip the TTL and refetch every source (used by the background refresher). */
+  force?: boolean;
 }
 
 interface CacheEntry {
@@ -55,15 +61,15 @@ export class Aggregator {
     return this.config.timezone ?? "UTC";
   }
 
-  async getSnapshot(): Promise<Snapshot> {
+  async getSnapshot(options: SnapshotOptions = {}): Promise<Snapshot> {
     if (this.refreshing) return this.refreshing;
-    this.refreshing = this.build().finally(() => {
+    this.refreshing = this.build(options.force ?? false).finally(() => {
       this.refreshing = null;
     });
     return this.refreshing;
   }
 
-  private async build(): Promise<Snapshot> {
+  private async build(force: boolean): Promise<Snapshot> {
     const now = this.now();
     const enabled = this.config.sources.filter((source) => source.enabled !== false);
     const ttlMs = (this.config.cacheTtlSeconds ?? 900) * 1000;
@@ -72,7 +78,7 @@ export class Aggregator {
     await Promise.all(
       enabled.map(async (source) => {
         const cached = this.cache.get(source.id);
-        if (cached && now.getTime() - cached.lastAttemptAt < ttlMs) return;
+        if (!force && cached && now.getTime() - cached.lastAttemptAt < ttlMs) return;
 
         refreshed.add(source.id);
         try {
@@ -126,7 +132,8 @@ export class Aggregator {
     }
 
     const merged = mergeEvents(raw, sourceMap);
-    const events = applyLanguageFilter(merged, this.config.languages ?? {});
+    const content = applyContentFilters(merged, buildExcludeKeywords(this.config.filters));
+    const events = applyLanguageFilter(content.events, this.config.languages ?? {});
     events.sort((left, right) => left.start.getTime() - right.start.getTime() || left.title.localeCompare(right.title));
 
     const sources: SourceHealth[] = enabled.map((source) => {
@@ -149,6 +156,7 @@ export class Aggregator {
       generatedAt: now,
       events,
       sources,
+      excludedCount: content.excluded,
       healthy: sources.some((source) => source.ok) || events.length > 0,
     };
   }
@@ -193,6 +201,7 @@ function mergeGroup(group: LanguageEvent[], sourceMap: Map<string, SourceConfig>
       id: event.sourceId,
       label: config?.label ?? event.sourceId,
       color: config?.color ?? DEFAULT_COLOR,
+      platform: config?.type ?? "ics",
     });
   }
 

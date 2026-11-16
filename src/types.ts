@@ -1,4 +1,4 @@
-export type SourceType = "ics" | "luma" | "tribe";
+export type SourceType = "ics" | "luma" | "rss" | "tribe";
 
 export interface SourceBase {
   /** Stable id used in URLs, UIDs and the UI. */
@@ -34,7 +34,21 @@ export interface TribeSourceConfig extends SourceBase {
   baseUrl: string;
 }
 
-export type SourceConfig = IcsSourceConfig | LumaSourceConfig | TribeSourceConfig;
+export interface RssSourceConfig extends SourceBase {
+  type: "rss";
+  /** RSS 2.0, Atom, or JSON Feed URL. */
+  url: string;
+  /** Fall back to the item's publication date when no event date is present. */
+  usePublishedDate?: boolean;
+  /** Duration for items without an explicit end (hours). */
+  durationHours?: number;
+}
+
+export type SourceConfig =
+  | IcsSourceConfig
+  | LumaSourceConfig
+  | TribeSourceConfig
+  | RssSourceConfig;
 
 export interface WindowConfig {
   daysBack?: number;
@@ -46,6 +60,11 @@ export interface LanguageFilterConfig {
   include?: string[];
   /** Drop these languages. */
   exclude?: string[];
+}
+
+export interface FiltersConfig {
+  /** Extra phrases to drop, on top of the built-in members-only rules. */
+  excludeKeywords?: string[];
 }
 
 /** An organisation worth following that has no public calendar feed yet. */
@@ -62,8 +81,12 @@ export interface Config {
   timezone?: string;
   window?: WindowConfig;
   cacheTtlSeconds?: number;
+  /** Background refresh cadence. 0 disables the timer. */
+  refreshIntervalSeconds?: number;
   /** Applied to every feed/API response unless overridden by query params. */
   languages?: LanguageFilterConfig;
+  /** Content exclusions such as members-only events. */
+  filters?: FiltersConfig;
   /** Organisations with no machine-readable calendar, surfaced in the UI and CLI. */
   watchlist?: WatchEntry[];
   sources: SourceConfig[];
@@ -97,6 +120,8 @@ export interface SourceRef {
   id: string;
   label: string;
   color: string;
+  /** Source platform, e.g. luma, tribe, ics or rss. */
+  platform: SourceType;
 }
 
 /** A de-duplicated event ready for output. */
@@ -137,6 +162,8 @@ export interface Snapshot {
   generatedAt: Date;
   events: CalendarEvent[];
   sources: SourceHealth[];
+  /** Events removed by content filters (members-only by default). */
+  excludedCount: number;
   /** True when at least one source returned events. */
   healthy: boolean;
 }

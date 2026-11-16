@@ -7,6 +7,7 @@ const state = {
   q: "",
   lang: "",
   generatedAt: null,
+  excludedCount: 0,
   initialized: false,
 };
 
@@ -45,6 +46,13 @@ const LANGUAGE_LABELS = {
   pt: "Portuguese",
   other: "Other",
   unknown: "Unknown",
+};
+
+const PLATFORM_LABELS = {
+  luma: "Luma",
+  tribe: "Website",
+  ics: "ICS",
+  rss: "RSS",
 };
 
 const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -95,6 +103,7 @@ async function load() {
     state.watchlist = Array.isArray(data.watchlist) ? data.watchlist : [];
     state.languages = Array.isArray(data.languages) ? data.languages : [];
     state.generatedAt = data.generatedAt ?? null;
+    state.excludedCount = Number(data.excludedCount) || 0;
     state.activeSources = new Set(
       state.initialized ? sourceIds.filter((id) => previous.has(id)) : sourceIds,
     );
@@ -152,9 +161,10 @@ function renderSources() {
     chip.type = "button";
     chip.className = "chip";
     chip.setAttribute("aria-pressed", String(state.activeSources.has(source.id)));
+    const platform = PLATFORM_LABELS[source.type] ?? source.type;
     chip.title = source.ok
-      ? `${source.label}: ${count} events`
-      : `${source.label}: ${source.error ?? "unavailable"}${source.stale ? " (cached)" : ""}`;
+      ? `${platform} source · ${source.label}: ${count} events`
+      : `${platform} source · ${source.label}: ${source.error ?? "unavailable"}${source.stale ? " (cached)" : ""}`;
 
     const dot = document.createElement("span");
     dot.className = "dot";
@@ -330,8 +340,10 @@ function summarize(visible) {
         minute: "2-digit",
       }).format(new Date(state.generatedAt))}`
     : "";
+  const hidden =
+    state.excludedCount > 0 ? ` · ${state.excludedCount} hidden (members-only)` : "";
   const count = visible === total ? `${total}` : `${visible} of ${total}`;
-  return `${count} event${total === 1 ? "" : "s"} · ${live}/${state.sources.length} sources live${updated}`;
+  return `${count} event${total === 1 ? "" : "s"} · ${live}/${state.sources.length} sources live${hidden}${updated}`;
 }
 
 function filterEvents() {
@@ -480,7 +492,12 @@ function renderEvent(event) {
     dot.style.setProperty("--dot", source.color || "#6d7078");
     const label = document.createElement("span");
     label.textContent = source.label;
-    tag.append(dot, label);
+
+    const platform = document.createElement("span");
+    platform.className = "tag-platform";
+    platform.textContent = PLATFORM_LABELS[source.platform] ?? source.platform ?? "";
+
+    tag.append(dot, label, platform);
     tags.append(tag);
   }
 

@@ -6,6 +6,10 @@
     "daysAhead": 180
   },
   "cacheTtlSeconds": 900,
+  "refreshIntervalSeconds": 300,
+  "filters": {
+    "excludeKeywords": []
+  },
   "languages": {
     "exclude": []
   },

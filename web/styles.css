@@ -453,6 +453,17 @@ summary:focus-visible {
   border-color: transparent;
 }
 
+.tag-platform {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-left: 1px solid var(--line);
+  padding-left: 5px;
+  margin-left: 1px;
+}
+
 .event-details {
   margin-top: 7px;
   color: var(--muted);

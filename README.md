@@ -22,23 +22,47 @@ silently dropped. See [Watchlist](#watchlist).
 ## How it works
 
 ```
-Luma ICS ─┐
-Tribe ICS ─┼─> fetch ─> parse ─> expand recurrences ─> dedupe/merge ─> language filter ─> feed.ics
-Any ICS ──┘                                                    │
+Luma ──────┐
+Tribe ─────┤
+RSS/Atom ──┼─> fetch ─> parse ─> expand recurrences ─> dedupe/merge
+Any ICS ───┘                                                   │
+                                                               ├─> members-only filter
+                                                               ├─> language filter
+                                                               ├─> /feed.ics
                                                                └─> /api/events ─> web UI
 ```
 
-Each source is fetched at most once per `cacheTtlSeconds`. If a refresh fails,
-the last successful snapshot is served and flagged as stale, so a flaky upstream
-never blanks out your calendar.
+Sources are cached for `cacheTtlSeconds`, and the background refresher forces a
+refetch every `refreshIntervalSeconds`. If a refresh fails, the last successful
+snapshot is served and flagged as stale, so a flaky upstream never blanks out
+your calendar.
+
+`/feed.ics` is an output, not a requirement: source sites can be Luma, The
+Events Calendar, RSS/Atom/JSON Feed, or plain ICS.
+
+## Does it update automatically?
+
+Yes. There is no manual export or sync step:
+
+- A background refresher refetches every source on `refreshIntervalSeconds` (default 300 seconds; `0` disables it).
+- Requests also refresh a source once its `cacheTtlSeconds` has elapsed, and failures fall back to the last good snapshot.
+- The UI polls `/api/events` every 5 minutes while it is open.
+- Calendar apps control their own refresh: Apple every 15 minutes to a few hours, Google roughly every 12–24 hours, Outlook 3–12 hours. The feed advertises `REFRESH-INTERVAL:PT15M`, but apps may ignore it.
+
+The background timer needs a long-running process; on a host that sleeps when
+idle, the first request after wake-up performs the refresh instead.
+
+Sources do not need to publish ICS. Luma and The Events Calendar are read through their native feeds, and RSS/Atom/JSON Feed is supported directly. `/feed.ics` is only an output format for calendar apps — if you only use the web UI, no ICS file is involved at all.
+
+Every event records its platform (Luma, Website, RSS, or ICS), shown on the card and exposed as `sources[].platform` in the API.
 
 ## Quickstart
 
-Requires Node 20.11+.
+Requires Node 20.11+ and pnpm 11 (`corepack enable` will provide it).
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 - UI: <http://localhost:3000>
@@ -48,14 +72,14 @@ npm run dev
 Check that every configured source is reachable:
 
 ```bash
-npm run check
+pnpm check
 ```
 
 Print the next events in the terminal:
 
 ```bash
-npm run list -- --limit 15
-npm run list -- --lang en
+pnpm run list -- --limit 15
+pnpm run list -- --lang en
 ```
 
 ## Configuration
@@ -70,6 +94,8 @@ git.
   "timezone": "America/Los_Angeles",
   "window": { "daysBack": 1, "daysAhead": 180 },
   "cacheTtlSeconds": 900,
+  "refreshIntervalSeconds": 300,
+  "filters": { "excludeKeywords": [] },
   "languages": { "exclude": [] },
   "sources": [],
   "watchlist": []
@@ -83,6 +109,8 @@ git.
 | `window.daysBack`  | `1`                    | Keep events that ended this many days ago.             |
 | `window.daysAhead` | `180`                  | How far forward to fetch/expand.                       |
 | `cacheTtlSeconds`  | `900`                  | Per-source fetch cache.                                |
+| `refreshIntervalSeconds` | `300`            | Background refresh cadence; `0` disables.              |
+| `filters`          | none                   | Extra exclusion phrases (members-only rules are built in). |
 | `languages`        | none                   | Default include/exclude language filter.               |
 | `sources`          | required               | One or more source definitions (below).                |
 | `watchlist`        | `[]`                   | Organisations without a feed, shown in the UI.         |
@@ -132,6 +160,23 @@ iCal format", Meetup, Proton, Eventbrite event exports, another onecal instance.
 }
 ```
 
+**`rss`** — RSS 2.0, Atom, or JSON Feed. Dates are read from explicit
+`<startdate>`-style tags, schema.org `Event` JSON-LD, `<time datetime="...">`,
+then the title or description (`Nov 12, 2026 6:30 PM`, `2026年11月12日`, ISO).
+Items without any date are skipped; set `usePublishedDate` to fall back to the
+publication time. `durationHours` (default 2) is used when no end is given.
+
+```json
+{
+  "id": "some-org",
+  "label": "Some organisation",
+  "type": "rss",
+  "url": "https://example.com/events/feed.xml",
+  "usePublishedDate": false,
+  "durationHours": 2
+}
+```
+
 Common source fields: `id` (stable, used in URLs and UIDs), `label`, `color`,
 `enabled` (default `true`), `defaultLocation`, and `language` to force the
 language for that source instead of detecting per event.
@@ -141,7 +186,7 @@ language for that source instead of detecting per event.
 Some organisations only publish events as Wix pages, Eventbrite listings, or
 news posts. Instead of writing brittle scrapers that break silently, onecal
 records them under `watchlist` with a link, note, and contact. The UI shows a
-"Not connected yet" section, and `npm run check` prints them. When a real feed
+"Not connected yet" section, and `pnpm check` prints them. When a real feed
 appears, promote the entry to a normal source.
 
 ## Language filter
@@ -173,6 +218,23 @@ Notes: title language wins over description, so an English-titled event with a
 Japanese write-up counts as English. Han-only text is assumed Chinese; override
 it per source if that is wrong.
 
+## Members-only and other exclusions
+
+Events whose title, description, or categories contain members-only language are
+dropped by default. This covers English and Japanese, including variants like
+"Members Only", "Members-Only", "Exclusive to JCCNC Members", "会員限定",
+"会員のみ", and "メンバー限定". The UI and `/api/events` report how many were
+hidden.
+
+Add your own phrases on top of the built-in rules:
+
+```json
+"filters": { "excludeKeywords": ["no cameras", "invite only"] }
+```
+
+Matching is case-insensitive, hyphen-insensitive, and NFKC-normalised, so
+`Members-Only` and `ＭＥＭＢＥＲＳ－ＯＮＬＹ` match the same rule.
+
 ## Endpoints
 
 | Path                | Returns                                                            |
@@ -180,7 +242,7 @@ it per source if that is wrong.
 | `/`                 | Web UI.                                                            |
 | `/feed.ics`         | Merged iCalendar feed. Supports `source`, `lang`, `excludeLang`, `q`. |
 | `/calendar.ics`     | Alias of `/feed.ics`.                                              |
-| `/api/events`       | JSON events, language counts, source health, watchlist.            |
+| `/api/events`       | JSON events, language counts, `excludedCount`, source health, watchlist. |
 | `/api/sources`      | Source health, watchlist, language counts.                         |
 | `/healthz`          | Liveness probe.                                                    |
 
@@ -220,31 +282,34 @@ docker run -p 3000:3000 \
 Environment variables: `PORT`, `HOST`, `ONECAL_CONFIG`, `ONECAL_FEED_NAME`,
 `ONECAL_TIMEZONE`.
 
-Any Node host works: `npm run build && npm run serve`.
+Any Node host works: `pnpm build && pnpm serve`.
 
 ## Development
 
 ```bash
-npm install
-npm test          # node:test + tsx
-npm run typecheck
-npm run dev       # tsx watch
-npm run build     # tsc -> dist/
+pnpm install
+pnpm test          # node:test + tsx
+pnpm typecheck
+pnpm dev           # tsx watch
+pnpm build         # tsc -> dist/
 ```
 
 Layout:
 
 ```
 src/
-  server.ts        HTTP server, feed/API/static routes
+  server.ts        HTTP server, feed/API/static routes, background refresh
   aggregate.ts     caching, windowing, dedupe/merge, source health
   filters.ts       query-param and language filtering
+  content-filters.ts members-only and keyword exclusions
   languages.ts     script/stop-word detection + filters
+  platforms.ts     Luma / Website / RSS / ICS labels
   recur.ts         RRULE expansion in wall-clock time
   config.ts        config loading and validation
+  feed/            RSS, Atom and JSON Feed parsing
   ics/parse.ts     iCalendar parser (folding, escaping, TZID, RRULE metadata)
   ics/serialize.ts iCalendar writer (folding, escaping, stable UIDs)
-  sources/         ics, luma, tribe adapters + fetch policy
+  sources/         ics, luma, rss, tribe adapters + fetch policy
 web/               dependency-free UI
 test/              unit tests
 ```
@@ -258,5 +323,10 @@ test/              unit tests
   `YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and `EXDATE`. Other rules are kept as
   a single master occurrence.
 - Luma's ICS endpoint (`api.lu.ma/ics/get`) is undocumented and can change.
+- RSS/Atom items only become events when a real date can be found. Feeds that
+  publish undated news are skipped rather than turned into fake events.
 - Feed content is untrusted. The UI inserts it with `textContent`, never HTML.
+- The members-only filter is keyword-based. An event that merely mentions
+  membership without being restricted could be removed; tune
+  `filters.excludeKeywords` or the built-in list in `src/content-filters.ts`.
 - Instances are stateless; a restart refetches every source.

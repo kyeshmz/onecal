@@ -36,6 +36,10 @@ if (command === "check") {
     }
   }
 
+  console.log(
+    `\n${snapshot.events.length} event(s) in window · ${snapshot.excludedCount} hidden by filters`,
+  );
+
   const failed = snapshot.sources.filter((source) => !source.ok);
   process.exitCode = failed.length > 0 ? 1 : 0;
 } else if (command === "list") {
@@ -67,11 +71,14 @@ if (command === "check") {
     const date = dateFormat.format(event.start);
     const time = event.allDay ? "all-day" : timeFormat.format(event.start);
     const languageTag = event.language === "en" ? "" : ` [${languageLabel(event.language)}]`;
-    const sources = event.sources.map((source) => source.id).join("+");
+    const sources = event.sources.map((source) => `${source.platform}:${source.id}`).join("+");
     console.log(`${date.padEnd(12)}${time.padEnd(10)}${event.title}${languageTag}  (${sources})`);
   }
 
-  console.log(`\n${events.length} event(s) · ${snapshot.sources.filter((source) => source.ok).length} live source(s)`);
+  console.log(
+    `\n${events.length} event(s) · ${snapshot.sources.filter((source) => source.ok).length} live source(s)` +
+      ` · ${snapshot.excludedCount} hidden by filters`,
+  );
   const failed = snapshot.sources.filter((source) => !source.ok);
   if (failed.length > 0) {
     console.log(`Unavailable: ${failed.map((source) => `${source.label} (${source.error})`).join("; ")}`);

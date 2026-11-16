@@ -1,10 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { isValidTimeZone } from "./time.js";
-import type { Config, LanguageFilterConfig, SourceConfig, SourceType, WatchEntry } from "./types.js";
+import type {
+  Config,
+  FiltersConfig,
+  LanguageFilterConfig,
+  SourceConfig,
+  SourceType,
+  WatchEntry,
+} from "./types.js";
 
 export const DEFAULT_CONFIG_PATH = "config/calendars.json";
-const SOURCE_TYPES: SourceType[] = ["ics", "luma", "tribe"];
+const SOURCE_TYPES: SourceType[] = ["ics", "luma", "rss", "tribe"];
 
 export class ConfigError extends Error {}
 
@@ -55,9 +62,17 @@ export function validateConfig(input: unknown, source = "config"): Config {
     daysAhead: nonNegativeNumber(window.daysAhead, `${source}: window.daysAhead`, 180),
   };
   config.cacheTtlSeconds = nonNegativeNumber(input.cacheTtlSeconds, `${source}: cacheTtlSeconds`, 900);
+  config.refreshIntervalSeconds = nonNegativeNumber(
+    input.refreshIntervalSeconds,
+    `${source}: refreshIntervalSeconds`,
+    300,
+  );
 
   if (input.languages !== undefined) {
     config.languages = validateLanguages(input.languages, `${source}: languages`);
+  }
+  if (input.filters !== undefined) {
+    config.filters = validateFilters(input.filters, `${source}: filters`);
   }
   if (input.watchlist !== undefined) {
     config.watchlist = validateWatchlist(input.watchlist, `${source}: watchlist`);
@@ -121,6 +136,22 @@ function validateSource(input: unknown, where: string): SourceConfig {
     };
   }
 
+  if (type === "rss") {
+    return {
+      ...base,
+      type,
+      url: requiredString(input.url, `${where}: url`),
+      usePublishedDate: optionalBoolean(
+        input.usePublishedDate,
+        `${where}: usePublishedDate`,
+        false,
+      ),
+      durationHours: positiveNumber(input.durationHours, `${where}: durationHours`, 2),
+      ...(defaultLocation ? { defaultLocation } : {}),
+      ...(language ? { language } : {}),
+    };
+  }
+
   return {
     ...base,
     type: "tribe",
@@ -148,6 +179,12 @@ function validateLanguages(input: unknown, where: string): LanguageFilterConfig 
   if (include.length > 0) result.include = include;
   if (exclude.length > 0) result.exclude = exclude;
   return result;
+}
+
+function validateFilters(input: unknown, where: string): FiltersConfig {
+  if (!isRecord(input)) throw new ConfigError(`${where}: expected an object`);
+  const excludeKeywords = stringList(input.excludeKeywords, `${where}.excludeKeywords`);
+  return excludeKeywords.length > 0 ? { excludeKeywords } : {};
 }
 
 function validateWatchlist(input: unknown, where: string): WatchEntry[] {
@@ -203,5 +240,19 @@ function nonNegativeNumber(value: unknown, where: string, fallback: number): num
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
     throw new ConfigError(`${where} must be a non-negative number`);
   }
+  return value;
+}
+
+function positiveNumber(value: unknown, where: string, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new ConfigError(`${where} must be a positive number`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: unknown, where: string, fallback: boolean): boolean {
+  if (value === undefined) return fallback;
+  if (typeof value !== "boolean") throw new ConfigError(`${where} must be true or false`);
   return value;
 }
