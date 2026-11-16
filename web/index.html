@@ -51,12 +51,27 @@
             <option value="">All</option>
           </select>
         </label>
+        <label class="select">
+          <span>Type</span>
+          <select id="event-type">
+            <option value="">All types</option>
+          </select>
+        </label>
       </section>
 
       <nav id="sources" class="chips" aria-label="Calendar sources"></nav>
 
       <div id="banner" class="banner" role="status" hidden></div>
-      <p id="status" class="status" aria-live="polite">Loading events…</p>
+
+      <div class="viewbar">
+        <div class="segmented" role="group" aria-label="Calendar view">
+          <button id="view-agenda" class="segment is-active" type="button" aria-pressed="true">
+            Agenda
+          </button>
+          <button id="view-month" class="segment" type="button" aria-pressed="false">Month</button>
+        </div>
+        <p id="status" class="status" aria-live="polite">Loading events…</p>
+      </div>
 
       <main id="agenda" class="agenda">
         <p class="empty">Loading events…</p>

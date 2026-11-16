@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { extractNextData } from "../src/sources/next-data.js";
-import { mapLumaEvent } from "../src/sources/luma.js";
+import { lumaDiscoverFeedUrl, mapLumaEvent } from "../src/sources/luma.js";
 import { mapPartifulEvent } from "../src/sources/partiful.js";
 
 test("extracts Next.js page data", () => {
@@ -9,6 +9,14 @@ test("extracts Next.js page data", () => {
   assert.deepEqual(extractNextData(html), { props: { pageProps: { ok: true } } });
   assert.equal(extractNextData("<html></html>"), undefined);
   assert.equal(extractNextData('<script id="__NEXT_DATA__">{broken</script>'), undefined);
+});
+
+test("builds a Luma discover ICS URL", () => {
+  assert.equal(
+    lumaDiscoverFeedUrl("discplace-BDj7GNbGlsF7Cka"),
+    "https://api.lu.ma/ics/get?entity=discover&id=discplace-BDj7GNbGlsF7Cka",
+  );
+  assert.throws(() => lumaDiscoverFeedUrl("not-a-place"), /invalid Luma discover id/);
 });
 
 test("maps a Luma discover event", () => {

@@ -1,15 +1,12 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { resolve } from "node:path";
-import { Aggregator } from "./aggregate.js";
+import { createApp, type AppAssets } from "./app.js";
 import { ConfigError, loadConfig } from "./config.js";
-import { applyQueryFilters, readQueryFilters } from "./filters.js";
-import { eventsToIcs } from "./ics/serialize.js";
-import { languageCounts } from "./languages.js";
-import type { CalendarEvent, Config } from "./types.js";
+import type { Config } from "./types.js";
+
 const WEB_DIR = resolve(import.meta.dirname, "..", "web");
 const PORT = Number(process.env.PORT ?? 3000);
-const TTL_SECONDS = 900;
 
 const STATIC_FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
@@ -17,6 +14,30 @@ const STATIC_FILES: Record<string, { file: string; type: string }> = {
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
   "/styles.css": { file: "styles.css", type: "text/css; charset=utf-8" },
   "/favicon.svg": { file: "favicon.svg", type: "image/svg+xml" },
+};
+
+const assets: AppAssets = {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const asset = STATIC_FILES[url.pathname];
+    if (!asset) {
+      return new Response("Not found\n", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    try {
+      const body = await readFile(resolve(WEB_DIR, asset.file));
+      return new Response(body, {
+        headers: { "content-type": asset.type, "cache-control": "no-cache" },
+      });
+    } catch {
+      return new Response("Asset not found\n", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+  },
 };
 
 function loadRuntimeConfig(): Config {
@@ -37,12 +58,12 @@ try {
   throw error;
 }
 
-const aggregator = new Aggregator(config);
+const app = createApp({ config, assets });
 
 const refreshSeconds = config.refreshIntervalSeconds ?? 300;
 if (refreshSeconds > 0) {
   const refresh = (): void => {
-    void aggregator.getSnapshot({ force: true }).catch((error) => {
+    void app.aggregator.getSnapshot({ force: true }).catch((error) => {
       console.error("[onecal] background refresh failed", error);
     });
   };
@@ -52,147 +73,51 @@ if (refreshSeconds > 0) {
   timer.unref();
 }
 
-async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
-  const method = request.method ?? "GET";
+function toRequest(request: IncomingMessage): Request {
+  const host = request.headers.host ?? "localhost";
+  const url = new URL(request.url ?? "/", `http://${host}`);
+  const headers = new Headers();
 
-  if (method !== "GET" && method !== "HEAD") {
-    sendJson(response, 405, { error: "method not allowed" }, method);
-    return;
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (Array.isArray(value)) headers.set(key, value.join(", "));
+    else if (typeof value === "string") headers.set(key, value);
   }
 
-  if (url.pathname === "/healthz") {
-    sendJson(response, 200, { ok: true }, method);
-    return;
-  }
-
-  if (url.pathname === "/api/events") {
-    const snapshot = await aggregator.getSnapshot();
-    const filters = readQueryFilters(url, config);
-    const events = applyQueryFilters(snapshot.events, filters);
-    sendJson(
-      response,
-      200,
-      {
-        generatedAt: snapshot.generatedAt.toISOString(),
-        count: events.length,
-        excludedCount: snapshot.excludedCount,
-        languages: languageCounts(events),
-        sources: snapshot.sources,
-        watchlist: config.watchlist ?? [],
-        events: events.map(serializeEvent),
-      },
-      method,
-    );
-    return;
-  }
-
-  if (url.pathname === "/api/sources") {
-    const snapshot = await aggregator.getSnapshot();
-    sendJson(
-      response,
-      200,
-      {
-        generatedAt: snapshot.generatedAt.toISOString(),
-        sources: snapshot.sources,
-        excludedCount: snapshot.excludedCount,
-        watchlist: config.watchlist ?? [],
-        languages: languageCounts(snapshot.events),
-      },
-      method,
-    );
-    return;
-  }
-
-  if (url.pathname === "/feed.ics" || url.pathname === "/calendar.ics") {
-    const snapshot = await aggregator.getSnapshot();
-    if (!snapshot.healthy && snapshot.events.length === 0) {
-      response.writeHead(503, {
-        "content-type": "text/plain; charset=utf-8",
-        "retry-after": "300",
-        "cache-control": "no-store",
-      });
-      response.end("No calendar sources are currently reachable. Try again shortly.\n");
-      return;
-    }
-
-    const filters = readQueryFilters(url, config);
-    const events = applyQueryFilters(snapshot.events, filters);
-    const body = eventsToIcs(events, {
-      calendarName: config.feedName ?? "OneCal",
-      sourceCount: snapshot.sources.length,
-    });
-
-    response.writeHead(200, {
-      "content-type": "text/calendar; charset=utf-8",
-      "content-disposition": 'inline; filename="onecal.ics"',
-      "cache-control": `public, max-age=${TTL_SECONDS}, stale-while-revalidate=3600`,
-      "access-control-allow-origin": "*",
-    });
-    response.end(method === "HEAD" ? undefined : body);
-    return;
-  }
-
-  const asset = STATIC_FILES[url.pathname];
-  if (asset) {
-    try {
-      const body = await readFile(resolve(WEB_DIR, asset.file));
-      response.writeHead(200, {
-        "content-type": asset.type,
-        "cache-control": "no-cache",
-      });
-      response.end(method === "HEAD" ? undefined : body);
-    } catch {
-      sendJson(response, 404, { error: "asset not found" }, method);
-    }
-    return;
-  }
-
-  sendJson(response, 404, { error: "not found" }, method);
+  return new Request(url, { method: request.method ?? "GET", headers });
 }
 
-function sendJson(
-  response: ServerResponse,
-  status: number,
-  payload: unknown,
-  method: string,
-): void {
-  const body = JSON.stringify(payload, null, 2);
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "access-control-allow-origin": "*",
+async function sendResponse(
+  response: Response,
+  target: ServerResponse,
+  headOnly: boolean,
+): Promise<void> {
+  target.statusCode = response.status;
+  response.headers.forEach((value, key) => {
+    target.setHeader(key, value);
   });
-  response.end(method === "HEAD" ? undefined : body);
+
+  if (headOnly || !response.body) {
+    target.end();
+    return;
+  }
+
+  target.end(Buffer.from(await response.arrayBuffer()));
 }
 
-function serializeEvent(event: CalendarEvent): Record<string, unknown> {
-  return {
-    id: event.id,
-    title: event.title,
-    start: event.start.toISOString(),
-    end: event.end.toISOString(),
-    allDay: event.allDay,
-    status: event.status,
-    language: event.language,
-    sources: event.sources,
-    ...(event.description ? { description: event.description } : {}),
-    ...(event.location ? { location: event.location } : {}),
-    ...(event.url ? { url: event.url } : {}),
-    ...(event.organizer ? { organizer: event.organizer } : {}),
-    ...(event.categories.length > 0 ? { categories: event.categories } : {}),
-  };
-}
-
-const server = createServer((request, response) => {
-  handle(request, response).catch((error) => {
+const server = createServer(async (request, response) => {
+  try {
+    const webRequest = toRequest(request);
+    const webResponse = await app.fetch(webRequest);
+    await sendResponse(webResponse, response, request.method === "HEAD");
+  } catch (error) {
     console.error("[onecal] request failed", error);
     if (response.headersSent) {
       response.end();
       return;
     }
-    sendJson(response, 500, { error: "internal server error" }, request.method ?? "GET");
-  });
+    response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "internal server error" }));
+  }
 });
 
 server.listen(PORT, () => {

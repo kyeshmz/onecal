@@ -19,6 +19,7 @@ function event(title: string, description?: string): CalendarEvent {
     status: "CONFIRMED",
     categories: [],
     language: "en",
+    eventType: "other",
     sources: [{ id: "a", label: "A", color: "#111111", platform: "ics" }],
     ...(description ? { description } : {}),
   };

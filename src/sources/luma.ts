@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { stableHash } from "../stable-hash.js";
 import { cleanText, extractEvents, parseIcs } from "../ics/parse.js";
 import type { LumaSourceConfig, RawEvent } from "../types.js";
 import { fetchHtml, fetchIcs, normalizeFeedUrl } from "./fetch.js";
@@ -12,6 +12,7 @@ interface LumaInitialData {
   kind?: string;
   data?: {
     calendar?: { api_id?: unknown };
+    place?: { api_id?: unknown };
     upcoming?: { entries?: Array<Record<string, unknown>> };
     events?: Array<Record<string, unknown>>;
   };
@@ -24,6 +25,17 @@ export function lumaFeedUrlForCalendar(calendarId: string): string {
   }
   const url = new URL("https://api.lu.ma/ics/get");
   url.searchParams.set("entity", "calendar");
+  url.searchParams.set("id", id);
+  return url.toString();
+}
+
+export function lumaDiscoverFeedUrl(discoverId: string): string {
+  const id = discoverId.trim();
+  if (!/^discplace-[A-Za-z0-9]+$/.test(id)) {
+    throw new Error(`invalid Luma discover id "${discoverId}" (expected discplace-XXXXXXXX)`);
+  }
+  const url = new URL("https://api.lu.ma/ics/get");
+  url.searchParams.set("entity", "discover");
   url.searchParams.set("id", id);
   return url.toString();
 }
@@ -80,6 +92,10 @@ export async function loadLumaSource(
     return loadIcsFeed(lumaFeedUrlForCalendar(source.calendarId), source, options);
   }
 
+  if (source.discoverId) {
+    return loadIcsFeed(lumaDiscoverFeedUrl(source.discoverId), source, options);
+  }
+
   if (!source.url) throw new Error(`Luma source "${source.id}" needs calendarId or url`);
 
   const normalized = normalizeFeedUrl(source.url);
@@ -89,6 +105,15 @@ export async function loadLumaSource(
   const initial = readInitialData(html);
 
   if (initial?.kind === "discover-place") {
+    const placeId = text(initial.data?.place?.api_id);
+    if (placeId) {
+      try {
+        return await loadIcsFeed(lumaDiscoverFeedUrl(placeId), source, options);
+      } catch (error) {
+        console.warn(`[onecal] ${source.id}: discover ICS failed, using page data`, error);
+      }
+    }
+
     const entries = initial.data?.events ?? [];
     const events = mapEntries(entries, source.id);
     if (events.length === 0) {
@@ -124,7 +149,7 @@ export function mapLumaEvent(
   const end = parseDate(text(event.end_at) ?? text(fallback.end)) ?? new Date(start.getTime() + TWO_HOURS);
   const title = cleanText(text(event.name) ?? text(event.title) ?? "") || "Untitled event";
   const apiId = text(event.api_id) ?? text(event.id);
-  const uid = apiId ?? `luma-${hash(`${title}|${start.toISOString()}`)}`;
+  const uid = apiId ?? `luma-${stableHash(`${title}|${start.toISOString()}`)}`;
 
   const result: RawEvent = {
     uid,
@@ -218,8 +243,4 @@ function text(value: unknown): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hash(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 16);
 }

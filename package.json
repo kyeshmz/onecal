@@ -11,16 +11,21 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "build": "tsc",
+    "generate:config": "node scripts/generate-config.mjs",
+    "build": "node scripts/generate-config.mjs && tsc",
     "serve": "node dist/server.js",
     "test": "node --import tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/generate-config.mjs && tsc --noEmit",
+    "worker:dev": "node scripts/generate-config.mjs && wrangler dev",
+    "deploy": "node scripts/generate-config.mjs && wrangler deploy",
+    "deploy:dry": "node scripts/generate-config.mjs && wrangler deploy --dry-run --outdir .wrangler/dry-run",
     "check": "tsx src/cli.ts check",
     "list": "tsx src/cli.ts list"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wrangler": "^4.163.0"
   }
 }

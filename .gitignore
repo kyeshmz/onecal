@@ -1,5 +1,7 @@
 node_modules/
 dist/
+src/generated/
+.wrangler/
 .env
 .env.local
 *.log

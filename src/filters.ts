@@ -5,6 +5,7 @@ export interface QueryFilters {
   sources: string[];
   q: string;
   languages: LanguageFilterConfig;
+  types: string[];
 }
 
 /** Read ?source=, ?lang=, ?excludeLang= and ?q= from a request, merged with config defaults. */
@@ -23,6 +24,7 @@ export function readQueryFilters(url: URL, config: Config): QueryFilters {
     sources: requestedSources,
     q: (url.searchParams.get("q") ?? "").trim().toLowerCase(),
     languages: { include, exclude },
+    types: listParam(url, "type"),
   };
 }
 
@@ -32,6 +34,9 @@ export function applyQueryFilters(events: CalendarEvent[], filters: QueryFilters
 
   return languageFiltered.filter((event) => {
     if (sourceFilter.size > 0 && !event.sources.some((source) => sourceFilter.has(source.id))) {
+      return false;
+    }
+    if ((filters.types ?? []).length > 0 && !filters.types.includes(event.eventType)) {
       return false;
     }
     if (filters.q && !matchesQuery(event, filters.q)) return false;

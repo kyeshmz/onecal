@@ -26,6 +26,8 @@ export interface LumaSourceConfig extends SourceBase {
   type: "luma";
   /** Luma calendar id, e.g. cal-XXXXXXXXXXXXXXX. */
   calendarId?: string;
+  /** Luma discover place id for a city feed, e.g. discplace-XXXXXXXXXXXXXXX. */
+  discoverId?: string;
   /** A Luma calendar page (lu.ma/<slug>), a Luma ICS URL, or a personal webcal feed. */
   url?: string;
 }
@@ -153,6 +155,8 @@ export interface CalendarEvent {
   categories: string[];
   /** Detected primary language of the event (BCP-47-ish code). */
   language: string;
+  /** Detected event kind: conference, hackathon, meetup, etc. */
+  eventType: string;
   sources: SourceRef[];
 }
 

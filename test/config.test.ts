@@ -73,7 +73,7 @@ test("rejects duplicate source ids", () => {
 test("requires a Luma calendar id or url", () => {
   assert.throws(
     () => validateConfig({ sources: [{ id: "x", label: "X", type: "luma" }] }),
-    /needs? "calendarId" or "url"/,
+    /needs? "calendarId", "discoverId" or "url"/,
   );
 });
 
@@ -85,8 +85,21 @@ test("rejects unknown timezones and empty source lists", () => {
   );
 });
 
-test("defaults Partiful sources to SF", () => {
+test("accepts a Luma discover id", () => {
   const config = validateConfig({
+    sources: [
+      { id: "luma-sf", label: "Luma SF", type: "luma", discoverId: "discplace-BDj7GNbGlsF7Cka" },
+    ],
+  });
+
+  const source = config.sources[0];
+  assert.equal(source?.type, "luma");
+  if (source?.type === "luma") {
+    assert.equal(source.discoverId, "discplace-BDj7GNbGlsF7Cka");
+  }
+});
+
+test("defaults Partiful sources to SF", () => {  const config = validateConfig({
     sources: [{ id: "partiful", label: "Partiful", type: "partiful" }],
   });
 

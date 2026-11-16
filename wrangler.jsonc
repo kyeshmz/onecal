@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "onecal",
+  "main": "src/worker.ts",
+  "account_id": "6421a35360c2f4cad7a74961237f7019",
+  "compatibility_date": "2026-11-16",
+  "assets": {
+    "directory": "./web",
+    "binding": "ASSETS"
+  },
+  "routes": [
+    {
+      "pattern": "events.kyeshimizu.com",
+      "custom_domain": true
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

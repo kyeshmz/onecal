@@ -4,9 +4,13 @@ One subscribable calendar built from many event sources: Luma calendars, The
 Events Calendar sites (like `usajapan.org`), and any public iCalendar feed.
 
 It fetches each source, normalises events, merges duplicates that appear in more
-than one feed, filters by language, and serves a single `.ics` feed you can add
-to Apple Calendar, Google Calendar, Outlook, or anything else that speaks
-iCalendar. A small web UI is included for browsing and searching.
+than one feed, filters by language, classifies the event type, and serves a
+single `.ics` feed you can add to Apple Calendar, Google Calendar, Outlook, or
+anything else that speaks iCalendar. A web UI with agenda and month views is
+included for browsing, searching, and filtering.
+
+Live at **<https://events.kyeshimizu.com>** · code at
+**<https://github.com/kyeshmz/onecal>**.
 
 Built for tracking Bay Area Japan / tech events across:
 
@@ -120,19 +124,19 @@ git.
 
 ### Source types
 
-**`luma`** — a Luma calendar or a city/discover page. Prefer `calendarId` for a
-calendar; `url` accepts a calendar page (`lu.ma/keizai`) or a city page
-(`lu.ma/sf`), which onecal reads from the public page payload behind Luma's own
-app. Calendar pages with no upcoming entries fall back to the public ICS export.
-A personal feed (`https://api2.lu.ma/ics/get?entity=user&id=icssk-...`) also
-works with `url`; treat that URL like a password.
+**`luma`** — a Luma calendar, a city discover feed, or a calendar page. Prefer
+`calendarId` for a calendar or `discoverId` for a city (both use Luma's public
+ICS endpoint). A page URL (`lu.ma/keizai` or `lu.ma/sf`) also works: onecal reads
+the public page payload behind Luma's own app, with ICS as the fallback. A
+personal feed (`https://api2.lu.ma/ics/get?entity=user&id=icssk-...`) works with
+`url`; treat that URL like a password.
 
 ```json
 {
   "id": "luma-sf",
   "label": "Luma — San Francisco",
   "type": "luma",
-  "url": "https://lu.ma/sf",
+  "discoverId": "discplace-BDj7GNbGlsF7Cka",
   "locationIncludes": ["San Francisco"],
   "color": "#5b6cff"
 }
@@ -238,6 +242,31 @@ Notes: title language wins over description, so an English-titled event with a
 Japanese write-up counts as English. Han-only text is assumed Chinese; override
 it per source if that is wrong.
 
+## Event types
+
+Every event is classified into a coarse kind — Hackathon, Conference, Festival /
+Market, Performance / Screening, Workshop, Panel, Talk / Seminar, Networking,
+Social / Party, Meetup, Pitch / Demo, Class, or Other — from its title,
+description, and categories. Titles are weighted above descriptions.
+
+- The UI shows a type badge on each event and a **Type** filter
+- `?type=performance` (or repeated/comma-separated values) filters the API and feed
+- ICS adds the type to `CATEGORIES` and `X-ONECAL-TYPE`
+- Rules live in [`src/event-types.ts`](src/event-types.ts); classification is
+  heuristic, not semantic, so unusual titles can land in Other
+
+## Views
+
+The UI has two views:
+
+- **Agenda** — chronological days with full event cards
+- **Month** — a 7-column month grid with event markers; selecting a day shows its
+  events below. On phones the grid switches to colored dots and tapping a day
+  scrolls to that day's list.
+
+`?view=month` opens the month view directly. The layout is responsive down to
+390px.
+
 ## Members-only and other exclusions
 
 Events whose title, description, or categories contain members-only language are
@@ -262,13 +291,15 @@ Matching is case-insensitive, hyphen-insensitive, and NFKC-normalised, so
 | `/`                 | Web UI.                                                            |
 | `/feed.ics`         | Merged iCalendar feed. Supports `source`, `lang`, `excludeLang`, `q`. |
 | `/calendar.ics`     | Alias of `/feed.ics`.                                              |
-| `/api/events`       | JSON events, language counts, `excludedCount`, source health, watchlist. |
-| `/api/sources`      | Source health, watchlist, language counts.                         |
+| `/api/events`       | JSON events, language/type counts, `excludedCount`, source health, watchlist. |
+| `/api/sources`      | Source health, watchlist, language/type counts.                    |
 | `/healthz`          | Liveness probe.                                                    |
 
 The ICS response is sent with `Cache-Control: public, max-age=900` and open
 CORS. If every source is down and there is no cached snapshot, `/feed.ics`
 returns `503` rather than wiping the subscriber's calendar with an empty feed.
+
+Filters work on both outputs: `?source=keizai&lang=en&type=meetup,conference&q=ai`.
 
 ## Subscribing
 
@@ -285,6 +316,27 @@ For a calendar app to reach the feed, the host must be publicly reachable over
 HTTPS. `localhost` works for `webcal` on the same machine but not for Google.
 
 ## Deploying
+
+### Cloudflare Workers
+
+The live site runs as a Worker with static assets:
+
+```bash
+pnpm deploy        # generate embedded config, then wrangler deploy
+pnpm worker:dev    # local workerd
+pnpm deploy:dry    # bundle check without uploading
+```
+
+`wrangler.jsonc` binds `events.kyeshimizu.com` as a custom domain and serves
+`web/` as assets. `config/calendars.json` is embedded at deploy time by
+`scripts/generate-config.mjs`. If you fork this, remove or change the
+`account_id` and `routes` entries for your own domain.
+
+The Worker has no background timer; each isolate refreshes on demand and keeps
+its own in-memory cache. That is fine for this traffic. The Node server below
+also supports `refreshIntervalSeconds` for always-warm data.
+
+### Docker / Node
 
 ```bash
 docker build -t onecal .
@@ -312,25 +364,31 @@ pnpm test          # node:test + tsx
 pnpm typecheck
 pnpm dev           # tsx watch
 pnpm build         # tsc -> dist/
+pnpm generate:config
 ```
 
 Layout:
 
 ```
 src/
-  server.ts        HTTP server, feed/API/static routes, background refresh
+  server.ts        Node HTTP server + background refresh
+  worker.ts        Cloudflare Worker entry
+  app.ts           shared Web-standard request handler
   aggregate.ts     caching, windowing, dedupe/merge, source health
-  filters.ts       query-param and language filtering
+  filters.ts       query-param, language and type filtering
+  event-types.ts   conference/hackathon/meetup classification
   content-filters.ts members-only and keyword exclusions
   languages.ts     script/stop-word detection + filters
-  platforms.ts     Luma / Website / RSS / ICS labels
+  platforms.ts     Luma / Partiful / Website / RSS / ICS labels
   recur.ts         RRULE expansion in wall-clock time
-  config.ts        config loading and validation
+  config.ts        Node config loading
+  config-schema.ts config validation (Node + Worker)
   feed/            RSS, Atom and JSON Feed parsing
   ics/parse.ts     iCalendar parser (folding, escaping, TZID, RRULE metadata)
   ics/serialize.ts iCalendar writer (folding, escaping, stable UIDs)
   sources/         ics, luma, partiful, rss, tribe adapters + fetch policy
-web/               dependency-free UI
+scripts/           embedded-config generation for Workers
+web/               dependency-free UI (agenda + month views)
 test/              unit tests
 ```
 
@@ -352,4 +410,5 @@ test/              unit tests
 - The members-only filter is keyword-based. An event that merely mentions
   membership without being restricted could be removed; tune
   `filters.excludeKeywords` or the built-in list in `src/content-filters.ts`.
+- Event types are keyword heuristics; an unusual title may land in Other.
 - Instances are stateless; a restart refetches every source.

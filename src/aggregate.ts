@@ -1,5 +1,6 @@
-import { createHash } from "node:crypto";
+import { stableHash } from "./stable-hash.js";
 import { applyContentFilters, buildExcludeKeywords, matchesLocation } from "./content-filters.js";
+import { detectEventType } from "./event-types.js";
 import { applyLanguageFilter, detectEventLanguage } from "./languages.js";
 import { expandSourceEvents } from "./recur.js";
 import { describeError } from "./sources/fetch.js";
@@ -217,9 +218,10 @@ function mergeGroup(group: LanguageEvent[], sourceMap: Map<string, SourceConfig>
   );
   const categories = [...new Set(group.flatMap((event) => event.categories))];
   const status = group.some((event) => event.status === "CONFIRMED") ? "CONFIRMED" : base.status;
+  const eventType = detectEventType(title, description, categories);
 
   return {
-    id: `onecal-${hash(`${base.sourceId}|${base.uid}`)}@onecal`,
+    id: `onecal-${stableHash(`${base.sourceId}|${base.uid}`)}@onecal`,
     uid: base.uid,
     title,
     start: base.start,
@@ -228,6 +230,7 @@ function mergeGroup(group: LanguageEvent[], sourceMap: Map<string, SourceConfig>
     status,
     categories,
     language: base.language,
+    eventType,
     sources,
     ...(description ? { description } : {}),
     ...(location ? { location } : {}),
@@ -278,8 +281,4 @@ function longest(values: string[]): string | undefined {
 
 function isPresent(value: string | undefined): value is string {
   return typeof value === "string" && value.length > 0;
-}
-
-function hash(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 20);
 }

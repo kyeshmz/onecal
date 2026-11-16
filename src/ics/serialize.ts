@@ -1,4 +1,5 @@
 import { addDays, formatDateOnly, formatUtcTimestamp } from "../time.js";
+import { eventTypeLabel } from "../event-types.js";
 import { platformLabel } from "../platforms.js";
 import type { CalendarEvent } from "../types.js";
 
@@ -60,13 +61,16 @@ function serializeEvent(event: CalendarEvent, now: Date): string[] {
   lines.push(`STATUS:${event.status}`);
   lines.push("TRANSP:OPAQUE");
 
-  const categories = [...new Set([...event.categories, ...event.sources.map((source) => source.label)])];
+  const categories = [
+    ...new Set([...event.categories, eventTypeLabel(event.eventType), ...event.sources.map((source) => source.label)]),
+  ];
   if (categories.length > 0) lines.push(`CATEGORIES:${categories.map(escapeText).join(",")}`);
 
   lines.push(`X-ONECAL-SOURCES:${event.sources.map((source) => escapeText(source.label)).join(",")}`);
   lines.push(
     `X-ONECAL-PLATFORMS:${[...new Set(event.sources.map((source) => source.platform))].join(",")}`,
   );
+  lines.push(`X-ONECAL-TYPE:${event.eventType}`);
   lines.push(`X-ONECAL-LANGUAGE:${event.language}`);
 
   lines.push("END:VEVENT");

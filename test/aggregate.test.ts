@@ -68,7 +68,7 @@ test("merges the same event from two sources", async () => {
   assert.equal(merged?.location, "Japantown, San Francisco");
   assert.equal(merged?.url, "https://example.com/event");
   assert.deepEqual(merged?.categories.sort(), ["AI", "Design"]);
-  assert.match(merged?.id ?? "", /^onecal-[0-9a-f]{20}@onecal$/);
+  assert.match(merged?.id ?? "", /^onecal-[0-9a-f]{16}@onecal$/);
   assert.equal(merged?.language, "en");
   assert.deepEqual(
     merged?.sources.map((source) => source.platform),

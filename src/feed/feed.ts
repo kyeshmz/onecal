@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { cleanText } from "../ics/parse.js";
+import { stableHash } from "../stable-hash.js";
 import { isValidTimeZone, zonedTimeToUtc } from "../time.js";
 import { findChild, findChildren, findDescendants, parseXml, textOf, type XmlNode } from "./xml.js";
 
@@ -78,7 +78,7 @@ function parseRssItem(item: XmlNode, options: ParseFeedOptions): FeedItem {
   const id =
     textOf(findChild(item, "guid", "id")) ||
     link ||
-    hash(`${title}|${published?.toISOString() ?? ""}`);
+    stableHash(`${title}|${published?.toISOString() ?? ""}`);
 
   const result: FeedItem = { id, title, allDay: dates.allDay, categories: readCategories(item) };
   const description = cleanFeedHtml(rawDescription);
@@ -115,7 +115,7 @@ function parseAtomEntry(entry: XmlNode, options: ParseFeedOptions): FeedItem {
     options,
   });
 
-  const id = textOf(findChild(entry, "id")) || link || hash(`${title}|${published?.toISOString() ?? ""}`);
+  const id = textOf(findChild(entry, "id")) || link || stableHash(`${title}|${published?.toISOString() ?? ""}`);
 
   const result: FeedItem = { id, title, allDay: dates.allDay, categories: readCategories(entry) };
   const description = cleanFeedHtml(rawDescription);
@@ -160,7 +160,7 @@ function parseJsonFeed(raw: string, options: ParseFeedOptions): FeedItem[] {
       options,
     });
 
-    const id = stringValue(item.id) ?? link ?? hash(`${title}|${index}`);
+    const id = stringValue(item.id) ?? link ?? stableHash(`${title}|${index}`);
     const result: FeedItem = { id, title, allDay: dates.allDay, categories: readCategoriesFromJson(item) };
     const description = cleanFeedHtml(rawDescription);
     if (description) result.description = description;
@@ -516,8 +516,4 @@ function cleanFeedHtml(raw: string): string {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function hash(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 16);
 }

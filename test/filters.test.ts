@@ -17,8 +17,9 @@ function event(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     end: new Date("2026-11-17T21:00:00Z"),
     allDay: false,
     status: "CONFIRMED",
-    categories: ["AI"],
+    categories: [],
     language: "en",
+    eventType: "meetup",
     sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b", platform: "tribe" }],
     ...overrides,
   };
@@ -49,6 +50,7 @@ test("filters by source, language and free text", () => {
       id: "onecal-2@onecal",
       title: "新年会のご案内",
       language: "ja",
+      eventType: "social",
       sources: [{ id: "keizai", label: "Keizai", color: "#1f6f5c", platform: "luma" }],
     }),
   ];
@@ -72,4 +74,23 @@ test("filters by source, language and free text", () => {
   const byQuery = applyQueryFilters(events, { sources: [], q: "manga", languages: {} });
   assert.equal(byQuery.length, 1);
   assert.equal(byQuery[0]?.title, "Manga AI Night");
+});
+
+test("filters by event type", () => {
+  const events = [
+    event({ eventType: "hackathon" }),
+    event({
+      id: "onecal-2@onecal",
+      title: "AI Conference",
+      eventType: "conference",
+      sources: [{ id: "keizai", label: "Keizai", color: "#1f6f5c", platform: "luma" }],
+    }),
+  ];
+
+  const filters = readQueryFilters(new URL("http://localhost/api/events?type=hackathon"), CONFIG);
+  assert.deepEqual(filters.types, ["hackathon"]);
+
+  const filtered = applyQueryFilters(events, filters);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0]?.eventType, "hackathon");
 });

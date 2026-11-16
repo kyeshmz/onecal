@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { stableHash } from "../stable-hash.js";
 import { parseFeed } from "../feed/feed.js";
 import type { RawEvent, RssSourceConfig } from "../types.js";
 import { fetchText } from "./fetch.js";
@@ -37,7 +37,7 @@ export async function loadRssSource(
       new Date(item.start.getTime() + (item.allDay ? DAY_MS : durationMs));
 
     const event: RawEvent = {
-      uid: `rss-${hash(item.id)}`,
+      uid: `rss-${stableHash(item.id)}`,
       title: item.title,
       start: item.start,
       end,
@@ -61,8 +61,4 @@ export async function loadRssSource(
   }
 
   return events;
-}
-
-function hash(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 16);
 }

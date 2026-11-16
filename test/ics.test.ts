@@ -123,6 +123,7 @@ test("serializes a feed that round-trips through the parser", () => {
     organizer: "Japan Society",
     categories: ["AI", "Design"],
     language: "en",
+    eventType: "conference",
     sources: [{ id: "usajapan", label: "Japan Society", color: "#c2413b", platform: "tribe" }],
   };
 

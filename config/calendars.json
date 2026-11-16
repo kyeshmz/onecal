@@ -39,7 +39,7 @@
       "id": "luma-sf",
       "label": "Luma — San Francisco",
       "type": "luma",
-      "url": "https://lu.ma/sf",
+      "discoverId": "discplace-BDj7GNbGlsF7Cka",
       "locationIncludes": ["San Francisco"],
       "color": "#5b6cff"
     },

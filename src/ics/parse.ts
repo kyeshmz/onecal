@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { addDays, isValidTimeZone, zonedTimeToUtc } from "../time.js";
+import { stableHash } from "../stable-hash.js";
 import type { EventStatus, RawEvent } from "../types.js";
 
 export interface IcsProperty {
@@ -103,7 +103,7 @@ export function extractEvents(
 
     const uid =
       getPropertyValue(component, "UID")?.trim() ||
-      `generated-${hashId(`${title}|${start.date.toISOString()}|${location ?? ""}`)}`;
+      `generated-${stableHash(`${title}|${start.date.toISOString()}|${location ?? ""}`)}`;
 
     const status = normalizeStatus(getPropertyValue(component, "STATUS"));
     const organizerProperty = getProperty(component, "ORGANIZER");
@@ -360,8 +360,4 @@ function normalizeStatus(value: string | undefined): EventStatus {
     default:
       return "CONFIRMED";
   }
-}
-
-function hashId(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 16);
 }

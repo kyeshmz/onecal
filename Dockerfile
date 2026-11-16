@@ -9,6 +9,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY src ./src
+COPY scripts ./scripts
+COPY config ./config
 RUN pnpm build
 
 FROM node:22-alpine
