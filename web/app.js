@@ -128,19 +128,30 @@ async function load() {
 }
 
 function renderError(error) {
+  const text = error instanceof Error ? error.message : String(error);
+  const unreachable =
+    error instanceof TypeError || /(?:^|\D)(?:502|503|504)(?:\D|$)/.test(text);
+
   els.agenda.replaceChildren();
   const box = document.createElement("div");
   box.className = "empty";
   const title = document.createElement("strong");
-  title.textContent = "Could not load the calendar";
+  title.textContent = unreachable
+    ? "The calendar server is unreachable"
+    : "Could not load the calendar";
   const message = document.createElement("p");
-  message.textContent = error instanceof Error ? error.message : String(error);
+  message.textContent = unreachable
+    ? `Nothing is answering at ${window.location.origin}. Start it with "pnpm dev" and check that the port matches.`
+    : text;
+  const detail = document.createElement("p");
+  detail.className = "muted";
+  detail.textContent = text;
   const retry = document.createElement("button");
   retry.type = "button";
   retry.className = "btn";
   retry.textContent = "Try again";
   retry.addEventListener("click", load);
-  box.append(title, message, retry);
+  box.append(title, message, detail, retry);
   els.agenda.append(box);
 }
 
