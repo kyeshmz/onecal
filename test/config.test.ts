@@ -85,6 +85,19 @@ test("rejects unknown timezones and empty source lists", () => {
   );
 });
 
+test("defaults Partiful sources to SF", () => {
+  const config = validateConfig({
+    sources: [{ id: "partiful", label: "Partiful", type: "partiful" }],
+  });
+
+  const source = config.sources[0];
+  assert.equal(source?.type, "partiful");
+  if (source?.type === "partiful") {
+    assert.equal(source.region, "SF");
+    assert.equal(source.url, "https://partiful.com/explore");
+  }
+});
+
 test("rejects a non-boolean enabled flag", () => {
   assert.throws(
     () =>
@@ -97,8 +110,7 @@ test("rejects a non-boolean enabled flag", () => {
   );
 });
 
-test("validates RSS sources, filters and refresh settings", () => {
-  const config = validateConfig({
+test("validates RSS sources, filters and refresh settings", () => {  const config = validateConfig({
     refreshIntervalSeconds: 0,
     filters: { excludeKeywords: ["No Cameras"] },
     sources: [

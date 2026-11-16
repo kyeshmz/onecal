@@ -50,6 +50,7 @@ const LANGUAGE_LABELS = {
 
 const PLATFORM_LABELS = {
   luma: "Luma",
+  partiful: "Partiful",
   tribe: "Website",
   ics: "ICS",
   rss: "RSS",

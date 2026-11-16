@@ -36,13 +36,20 @@
       "color": "#5b6cff"
     },
     {
-      "id": "luma-example",
-      "label": "Add another Luma calendar",
+      "id": "luma-sf",
+      "label": "Luma — San Francisco",
       "type": "luma",
-      "url": "https://lu.ma/your-calendar-slug",
-      "color": "#8b5cf6",
-      "enabled": false,
-      "language": "en"
+      "url": "https://lu.ma/sf",
+      "locationIncludes": ["San Francisco"],
+      "color": "#5b6cff"
+    },
+    {
+      "id": "partiful-sf",
+      "label": "Partiful — San Francisco",
+      "type": "partiful",
+      "region": "SF",
+      "locationIncludes": ["San Francisco"],
+      "color": "#e11d48"
     },
     {
       "id": "google-holidays",

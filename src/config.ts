@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 
 export const DEFAULT_CONFIG_PATH = "config/calendars.json";
-const SOURCE_TYPES: SourceType[] = ["ics", "luma", "rss", "tribe"];
+const SOURCE_TYPES: SourceType[] = ["ics", "luma", "partiful", "rss", "tribe"];
 
 export class ConfigError extends Error {}
 
@@ -100,15 +100,18 @@ function validateSource(input: unknown, where: string): SourceConfig {
     throw new ConfigError(`${where}: type must be one of ${SOURCE_TYPES.join(", ")}`);
   }
 
+  const defaultLocation = optionalString(input.defaultLocation, `${where}: defaultLocation`);
+  const language = optionalString(input.language, `${where}: language`)?.toLowerCase();
+  const locationIncludes = stringList(input.locationIncludes, `${where}: locationIncludes`);
+
   const base = {
     id,
     label,
     type,
     color: optionalString(input.color, `${where}: color`) ?? "#5b6cff",
     enabled: validateEnabled(input.enabled, `${where}: enabled`),
+    ...(locationIncludes.length > 0 ? { locationIncludes } : {}),
   };
-  const defaultLocation = optionalString(input.defaultLocation, `${where}: defaultLocation`);
-  const language = optionalString(input.language, `${where}: language`)?.toLowerCase();
 
   if (type === "ics") {
     return {
@@ -147,6 +150,17 @@ function validateSource(input: unknown, where: string): SourceConfig {
         false,
       ),
       durationHours: positiveNumber(input.durationHours, `${where}: durationHours`, 2),
+      ...(defaultLocation ? { defaultLocation } : {}),
+      ...(language ? { language } : {}),
+    };
+  }
+
+  if (type === "partiful") {
+    return {
+      ...base,
+      type,
+      region: optionalString(input.region, `${where}: region`) ?? "SF",
+      url: optionalString(input.url, `${where}: url`) ?? "https://partiful.com/explore",
       ...(defaultLocation ? { defaultLocation } : {}),
       ...(language ? { language } : {}),
     };

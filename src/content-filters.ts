@@ -58,6 +58,22 @@ export function isExcludedByKeyword(text: string, keywords: string[]): boolean {
   return keywords.some((keyword) => haystack.includes(keyword));
 }
 
+/**
+ * Keep an event when the source has no location filter, when the event has no
+ * location (online/unknown), or when the location contains a wanted phrase.
+ */
+export function matchesLocation(
+  location: string | undefined,
+  includes: string[] | undefined,
+): boolean {
+  if (!includes || includes.length === 0) return true;
+  if (!location) return true;
+
+  const value = normalize(location);
+  if (/^online\b/.test(value)) return true;
+  return includes.some((include) => value.includes(normalize(include)));
+}
+
 function normalize(value: string): string {
   return value
     .normalize("NFKC")

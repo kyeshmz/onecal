@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { applyContentFilters, buildExcludeKeywords } from "./content-filters.js";
+import { applyContentFilters, buildExcludeKeywords, matchesLocation } from "./content-filters.js";
 import { applyLanguageFilter, detectEventLanguage } from "./languages.js";
 import { expandSourceEvents } from "./recur.js";
 import { describeError } from "./sources/fetch.js";
@@ -124,6 +124,7 @@ export class Aggregator {
       for (const event of expanded) {
         if (event.status === "CANCELLED") continue;
         if (!withinWindow(event.start, event.end, from, to)) continue;
+        if (!matchesLocation(event.location, source.locationIncludes)) continue;
         raw.push({
           ...event,
           language: detectEventLanguage(event.title, event.description, source.language),

@@ -4,6 +4,7 @@ import {
   applyContentFilters,
   buildExcludeKeywords,
   isExcludedByKeyword,
+  matchesLocation,
 } from "../src/content-filters.js";
 import type { CalendarEvent } from "../src/types.js";
 
@@ -56,4 +57,14 @@ test("matches members-only text in the description", () => {
 
   assert.equal(result.excluded, 1);
   assert.equal(result.events.length, 0);
+});
+
+test("filters locations while keeping online and unknown venues", () => {
+  assert.equal(matchesLocation("San Francisco, CA", ["san francisco"]), true);
+  assert.equal(matchesLocation("2 Marina Blvd, San Francisco, CA", ["san francisco"]), true);
+  assert.equal(matchesLocation("Mountain View, CA", ["san francisco"]), false);
+  assert.equal(matchesLocation("Online", ["san francisco"]), true);
+  assert.equal(matchesLocation(undefined, ["san francisco"]), true);
+  assert.equal(matchesLocation("Oakland, CA", []), true);
+  assert.equal(matchesLocation("Oakland, CA", undefined), true);
 });

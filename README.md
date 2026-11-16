@@ -12,7 +12,9 @@ Built for tracking Bay Area Japan / tech events across:
 
 - **Japan Society of Northern California** — `usajapan.org/events` (live)
 - **Keizai Silicon Valley** — `lu.ma/keizai` (live)
-- **Frontier Tower SF** — Luma (live, included as a second Luma example)
+- **Luma — San Francisco** — `lu.ma/sf` (live)
+- **Partiful — San Francisco** — `partiful.com/explore`, SF region (live)
+- **Frontier Tower SF** — Luma calendar (live)
 
 JCCNC, the Consulate General of Japan in SF, JCCCNC, Japantown Cultural
 District / JAYACon, and JETRO SF publish no machine-readable calendar, so they
@@ -23,6 +25,7 @@ silently dropped. See [Watchlist](#watchlist).
 
 ```
 Luma ──────┐
+Partiful ──┤
 Tribe ─────┤
 RSS/Atom ──┼─> fetch ─> parse ─> expand recurrences ─> dedupe/merge
 Any ICS ───┘                                                   │
@@ -54,7 +57,7 @@ idle, the first request after wake-up performs the refresh instead.
 
 Sources do not need to publish ICS. Luma and The Events Calendar are read through their native feeds, and RSS/Atom/JSON Feed is supported directly. `/feed.ics` is only an output format for calendar apps — if you only use the web UI, no ICS file is involved at all.
 
-Every event records its platform (Luma, Website, RSS, or ICS), shown on the card and exposed as `sources[].platform` in the API.
+Every event records its platform (Luma, Partiful, Website, RSS, or ICS), shown on the card and exposed as `sources[].platform` in the API.
 
 ## Quickstart
 
@@ -117,23 +120,39 @@ git.
 
 ### Source types
 
-**`luma`** — a Luma calendar. Prefer `calendarId`; a slug also works for
-single-calendar pages such as `https://lu.ma/keizai`.
+**`luma`** — a Luma calendar or a city/discover page. Prefer `calendarId` for a
+calendar; `url` accepts a calendar page (`lu.ma/keizai`) or a city page
+(`lu.ma/sf`), which onecal reads from the public page payload behind Luma's own
+app. Calendar pages with no upcoming entries fall back to the public ICS export.
+A personal feed (`https://api2.lu.ma/ics/get?entity=user&id=icssk-...`) also
+works with `url`; treat that URL like a password.
 
 ```json
 {
-  "id": "keizai",
-  "label": "Keizai Silicon Valley",
+  "id": "luma-sf",
+  "label": "Luma — San Francisco",
   "type": "luma",
-  "calendarId": "cal-DzmjnQ7XXUSP6Gi",
-  "color": "#1f6f5c"
+  "url": "https://lu.ma/sf",
+  "locationIncludes": ["San Francisco"],
+  "color": "#5b6cff"
 }
 ```
 
-City pages (`lu.ma/sf`) contain many calendars, so slug resolution fails there
-with a list of candidate ids. A personal Luma feed
-(`https://api2.lu.ma/ics/get?entity=user&id=icssk-...`) also works with `url`;
-treat that URL like a password.
+**`partiful`** — Partiful's public explore feed for a region (`SF`, `NYC` or
+`LA`). Partiful has no official public API, so onecal reads the same regional
+payload its web app renders. That feed is curated (currently five events per
+region), not a full index.
+
+```json
+{
+  "id": "partiful-sf",
+  "label": "Partiful — San Francisco",
+  "type": "partiful",
+  "region": "SF",
+  "locationIncludes": ["San Francisco"],
+  "color": "#e11d48"
+}
+```
 
 **`tribe`** — a WordPress site running The Events Calendar. onecal appends
 `?ical=1` itself.
@@ -178,8 +197,9 @@ publication time. `durationHours` (default 2) is used when no end is given.
 ```
 
 Common source fields: `id` (stable, used in URLs and UIDs), `label`, `color`,
-`enabled` (default `true`), `defaultLocation`, and `language` to force the
-language for that source instead of detecting per event.
+`enabled` (default `true`), `defaultLocation`, `language` to force the language
+for that source, and `locationIncludes` to keep only events whose venue contains
+one of those phrases (online and unknown venues are kept).
 
 ### Watchlist
 
@@ -309,7 +329,7 @@ src/
   feed/            RSS, Atom and JSON Feed parsing
   ics/parse.ts     iCalendar parser (folding, escaping, TZID, RRULE metadata)
   ics/serialize.ts iCalendar writer (folding, escaping, stable UIDs)
-  sources/         ics, luma, rss, tribe adapters + fetch policy
+  sources/         ics, luma, partiful, rss, tribe adapters + fetch policy
 web/               dependency-free UI
 test/              unit tests
 ```
@@ -323,6 +343,9 @@ test/              unit tests
   `YEARLY`, `INTERVAL`, `COUNT`, `UNTIL`, and `EXDATE`. Other rules are kept as
   a single master occurrence.
 - Luma's ICS endpoint (`api.lu.ma/ics/get`) is undocumented and can change.
+- Luma and Partiful have no official public API. Their adapters read the public
+  page payloads their web apps use, so a site redesign can break them.
+- Partiful's explore feed is curated (five events per region), not a full index.
 - RSS/Atom items only become events when a real date can be found. Feeds that
   publish undated news are skipped rather than turned into fake events.
 - Feed content is untrusted. The UI inserts it with `textContent`, never HTML.

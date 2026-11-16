@@ -234,6 +234,37 @@ test("force refresh bypasses the TTL", async () => {
   assert.equal(calls, 2);
 });
 
+test("applies a source location filter", async () => {
+  const aggregator = new Aggregator(
+    config({
+      sources: [
+        {
+          id: "a",
+          label: "A",
+          type: "ics",
+          url: "https://a.example/feed.ics",
+          locationIncludes: ["san francisco"],
+        },
+      ],
+    }),
+    {
+      now: () => NOW,
+      loader: async () => [
+        event({ uid: "sf", location: "San Francisco, CA" }),
+        event({
+          uid: "mv",
+          location: "Mountain View, CA",
+          start: new Date("2026-11-18T19:00:00Z"),
+          end: new Date("2026-11-18T21:00:00Z"),
+        }),
+      ],
+    },
+  );
+
+  const snapshot = await aggregator.getSnapshot();
+  assert.deepEqual(snapshot.events.map((entry) => entry.uid), ["sf"]);
+});
+
 test("reports a total outage as unhealthy", async () => {
   const aggregator = new Aggregator(config({ sources: [{ id: "a", label: "A", type: "ics", url: "https://a.example/feed.ics" }] }), {
     now: () => NOW,

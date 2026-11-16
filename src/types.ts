@@ -1,4 +1,4 @@
-export type SourceType = "ics" | "luma" | "rss" | "tribe";
+export type SourceType = "ics" | "luma" | "partiful" | "rss" | "tribe";
 
 export interface SourceBase {
   /** Stable id used in URLs, UIDs and the UI. */
@@ -12,6 +12,8 @@ export interface SourceBase {
   defaultLocation?: string;
   /** Force a language for this source instead of auto-detecting per event. */
   language?: string;
+  /** Keep only events whose location contains one of these phrases. Empty keeps all. */
+  locationIncludes?: string[];
 }
 
 export interface IcsSourceConfig extends SourceBase {
@@ -44,11 +46,20 @@ export interface RssSourceConfig extends SourceBase {
   durationHours?: number;
 }
 
+export interface PartifulSourceConfig extends SourceBase {
+  type: "partiful";
+  /** Partiful explore region: SF, NYC or LA. Defaults to SF. */
+  region?: string;
+  /** Defaults to https://partiful.com/explore. */
+  url?: string;
+}
+
 export type SourceConfig =
   | IcsSourceConfig
   | LumaSourceConfig
   | TribeSourceConfig
-  | RssSourceConfig;
+  | RssSourceConfig
+  | PartifulSourceConfig;
 
 export interface WindowConfig {
   daysBack?: number;
