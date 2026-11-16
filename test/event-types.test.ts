@@ -12,6 +12,17 @@ test("classifies common event kinds", () => {
   assert.equal(detectEventType("JCCNC Seminar: AI in Japan"), "seminar");
   assert.equal(detectEventType("Product Demo Day"), "pitch");
   assert.equal(detectEventType("AI 101 Workshop"), "workshop");
+  assert.equal(
+    detectEventType(
+      "Lower Nob Hill Weekly Cleanup w/ Free Lunch for Volunteers",
+      "A chance at free tickets to that evening's stand-up comedy show.",
+    ),
+    "volunteer",
+  );
+  assert.equal(
+    detectEventType("Embarcadero Center Lighting Ceremony & Holiday Market"),
+    "festival",
+  );
   assert.equal(detectEventType("Book Club"), "other");
 });
 

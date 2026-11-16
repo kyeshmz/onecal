@@ -69,9 +69,10 @@ export async function fetchIcs(url: string): Promise<string> {
   return text;
 }
 
-export function fetchHtml(url: string): Promise<string> {
+export function fetchHtml(url: string, options: FetchOptions = {}): Promise<string> {
   return fetchText(url, {
     accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    ...options,
   });
 }
 

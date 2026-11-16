@@ -6,6 +6,8 @@ export const PLATFORM_LABELS: Record<SourceType, string> = {
   tribe: "Website",
   ics: "ICS",
   rss: "RSS",
+  static: "Manual",
+  wordpress: "Website",
 };
 
 export function platformLabel(platform: SourceType): string {

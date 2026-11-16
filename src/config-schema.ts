@@ -5,10 +5,11 @@ import type {
   LanguageFilterConfig,
   SourceConfig,
   SourceType,
+  StaticEventConfig,
   WatchEntry,
 } from "./types.js";
 
-const SOURCE_TYPES: SourceType[] = ["ics", "luma", "partiful", "rss", "tribe"];
+const SOURCE_TYPES: SourceType[] = ["ics", "luma", "partiful", "rss", "tribe", "static", "wordpress"];
 
 export class ConfigError extends Error {}
 
@@ -127,6 +128,8 @@ function validateSource(input: unknown, where: string): SourceConfig {
         false,
       ),
       durationHours: positiveNumber(input.durationHours, `${where}: durationHours`, 2),
+      enrich: optionalBoolean(input.enrich, `${where}: enrich`, false),
+      freeOnly: optionalBoolean(input.freeOnly, `${where}: freeOnly`, false),
       ...(defaultLocation ? { defaultLocation } : {}),
       ...(language ? { language } : {}),
     };
@@ -143,6 +146,43 @@ function validateSource(input: unknown, where: string): SourceConfig {
     };
   }
 
+  if (type === "wordpress") {
+    return {
+      ...base,
+      type,
+      baseUrl: requiredString(input.baseUrl, `${where}: baseUrl`),
+      perPage: positiveInteger(input.perPage, `${where}: perPage`, 30),
+      enrich: optionalBoolean(input.enrich, `${where}: enrich`, false),
+      freeOnly: optionalBoolean(input.freeOnly, `${where}: freeOnly`, false),
+      durationHours: positiveNumber(input.durationHours, `${where}: durationHours`, 2),
+      ...(defaultLocation ? { defaultLocation } : {}),
+      ...(language ? { language } : {}),
+    };
+  }
+
+  if (type === "static") {
+    if (!Array.isArray(input.events) || input.events.length === 0) {
+      throw new ConfigError(`${where}: static sources need a non-empty "events" array`);
+    }
+    const events = input.events.map((event, index) =>
+      validateStaticEvent(event, `${where}.events[${index}]`),
+    );
+    const seen = new Set<string>();
+    for (const event of events) {
+      if (seen.has(event.uid)) {
+        throw new ConfigError(`${where}: duplicate static event uid "${event.uid}"`);
+      }
+      seen.add(event.uid);
+    }
+    return {
+      ...base,
+      type,
+      events,
+      ...(defaultLocation ? { defaultLocation } : {}),
+      ...(language ? { language } : {}),
+    };
+  }
+
   return {
     ...base,
     type: "tribe",
@@ -154,6 +194,55 @@ function validateSource(input: unknown, where: string): SourceConfig {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDateOnly(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validateStaticEvent(input: unknown, where: string): StaticEventConfig {
+  if (!isRecord(input)) throw new ConfigError(`${where}: expected an object`);
+
+  const date = requiredString(input.date, `${where}.date`);
+  if (!isDateOnly(date)) {
+    throw new ConfigError(`${where}.date must be a real date in YYYY-MM-DD form`);
+  }
+
+  const endDate = optionalString(input.endDate, `${where}.endDate`);
+  if (endDate && !isDateOnly(endDate)) {
+    throw new ConfigError(`${where}.endDate must be a real date in YYYY-MM-DD form`);
+  }
+  if (endDate && endDate < date) {
+    throw new ConfigError(`${where}.endDate must not be before date`);
+  }
+
+  const status = optionalString(input.status, `${where}.status`);
+  if (status && status !== "CONFIRMED" && status !== "TENTATIVE" && status !== "CANCELLED") {
+    throw new ConfigError(`${where}.status must be CONFIRMED, TENTATIVE or CANCELLED`);
+  }
+
+  const categories = stringList(input.categories, `${where}.categories`);
+  const description = optionalString(input.description, `${where}.description`);
+  const location = optionalString(input.location, `${where}.location`);
+  const url = optionalString(input.url, `${where}.url`);
+  const organizer = optionalString(input.organizer, `${where}.organizer`);
+  const rrule = optionalString(input.rrule, `${where}.rrule`);
+
+  return {
+    uid: requiredString(input.uid, `${where}.uid`),
+    title: requiredString(input.title, `${where}.title`),
+    date,
+    ...(endDate ? { endDate } : {}),
+    ...(description ? { description } : {}),
+    ...(location ? { location } : {}),
+    ...(url ? { url } : {}),
+    ...(organizer ? { organizer } : {}),
+    ...(status ? { status: status as StaticEventConfig["status"] } : {}),
+    ...(categories.length > 0 ? { categories } : {}),
+    ...(rrule ? { rrule } : {}),
+  };
 }
 
 function validateEnabled(value: unknown, where: string): boolean {
@@ -238,6 +327,19 @@ function positiveNumber(value: unknown, where: string, fallback: number): number
   if (value === undefined) return fallback;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new ConfigError(`${where} must be a positive number`);
+  }
+  return value;
+}
+
+function positiveInteger(value: unknown, where: string, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > 100
+  ) {
+    throw new ConfigError(`${where} must be an integer between 1 and 100`);
   }
   return value;
 }

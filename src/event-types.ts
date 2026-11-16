@@ -24,7 +24,17 @@ export const EVENT_TYPE_DEFINITIONS: EventTypeDefinition[] = [
     label: "Festival / Market",
     keywords: [
       "festival", "matsuri", "parade", "cherry blossom", "night market", "street fair",
+      "art fair", "craft fair", "makers market", "holiday market", "lighting ceremony",
       "expo", "祭り", "まつり", "フェス", "マーケット", "展示会",
+    ],
+  },
+  {
+    id: "volunteer",
+    label: "Volunteer",
+    keywords: [
+      "volunteer", "cleanup", "clean up", "work day", "workday", "trail", "habitat",
+      "restoration", "community service", "tree planting", "mutual aid", "beach cleanup",
+      "ボランティア", "清掃",
     ],
   },
   {

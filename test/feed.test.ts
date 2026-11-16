@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseFeed, parseLooseDate } from "../src/feed/feed.js";
+import { extractJsonLdEvent, parseFeed, parseLooseDate } from "../src/feed/feed.js";
+import { stripDatePrefix } from "../src/sources/rss.js";
 
 const TZ = "America/Los_Angeles";
 
@@ -101,6 +102,51 @@ test("parses ISO, Japanese and bare dates", () => {
     parseLooseDate("2026年11月12日 18:30", TZ)?.date.toISOString(),
     "2026-11-13T02:30:00.000Z",
   );
+  assert.equal(parseLooseDate("12/12/26", TZ)?.date.toISOString(), "2026-12-12T00:00:00.000Z");
   assert.equal(parseLooseDate("nothing here", TZ), undefined);
   assert.equal(parseLooseDate("Feb 30, 2026", TZ), undefined);
+});
+
+test("extracts schema.org event details including free offers", () => {
+  const html = `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "Free Comedy Night",
+    description: "A free show.",
+    startDate: "2026-11-18T19:00:00-08:00",
+    endDate: "2026-11-18T21:00:00-08:00",
+    location: {
+      "@type": "Place",
+      name: "The Function",
+      address: "1414 Market St, San Francisco, CA",
+    },
+    offers: { "@type": "Offer", price: "0.00", priceCurrency: "USD" },
+    url: "https://example.com/comedy",
+  })}</script>`;
+
+  const event = extractJsonLdEvent(html);
+  assert.equal(event?.name, "Free Comedy Night");
+  assert.equal(event?.description, "A free show.");
+  assert.equal(event?.startDate, "2026-11-18T19:00:00-08:00");
+  assert.equal(event?.location, "The Function, 1414 Market St, San Francisco, CA");
+  assert.equal(event?.isFree, true);
+  assert.equal(event?.url, "https://example.com/comedy");
+});
+
+test("marks paid offers as not free", () => {
+  const html = `<script type="application/ld+json">${JSON.stringify({
+    "@type": "Event",
+    name: "Paid gala",
+    offers: { "@type": "Offer", price: "25.00" },
+  })}</script>`;
+
+  assert.equal(extractJsonLdEvent(html)?.isFree, false);
+});
+
+test("strips a leading date from feed titles", () => {
+  assert.equal(
+    stripDatePrefix("12/12/26: SF's Winter Wonderland Festival - FREE"),
+    "SF's Winter Wonderland Festival - FREE",
+  );
+  assert.equal(stripDatePrefix("Free Comedy Night"), "Free Comedy Night");
 });

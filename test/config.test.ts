@@ -99,6 +99,45 @@ test("accepts a Luma discover id", () => {
   }
 });
 
+test("validates WordPress sources and perPage", () => {
+  const config = validateConfig({
+    sources: [
+      {
+        id: "funcheap",
+        label: "Funcheap",
+        type: "wordpress",
+        baseUrl: "https://sf.funcheap.com",
+        enrich: true,
+        freeOnly: true,
+      },
+    ],
+  });
+
+  const source = config.sources[0];
+  assert.equal(source?.type, "wordpress");
+  if (source?.type === "wordpress") {
+    assert.equal(source.perPage, 30);
+    assert.equal(source.enrich, true);
+    assert.equal(source.freeOnly, true);
+  }
+
+  assert.throws(
+    () =>
+      validateConfig({
+        sources: [
+          {
+            id: "wp",
+            label: "WP",
+            type: "wordpress",
+            baseUrl: "https://example.com",
+            perPage: 101,
+          },
+        ],
+      }),
+    /between 1 and 100/,
+  );
+});
+
 test("defaults Partiful sources to SF", () => {  const config = validateConfig({
     sources: [{ id: "partiful", label: "Partiful", type: "partiful" }],
   });
@@ -134,6 +173,8 @@ test("validates RSS sources, filters and refresh settings", () => {  const confi
         url: "https://example.com/feed.xml",
         usePublishedDate: true,
         durationHours: 1.5,
+        enrich: true,
+        freeOnly: true,
       },
     ],
   });
@@ -146,6 +187,8 @@ test("validates RSS sources, filters and refresh settings", () => {  const confi
   if (source?.type === "rss") {
     assert.equal(source.usePublishedDate, true);
     assert.equal(source.durationHours, 1.5);
+    assert.equal(source.enrich, true);
+    assert.equal(source.freeOnly, true);
   }
 
   assert.throws(

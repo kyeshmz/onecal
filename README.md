@@ -1,7 +1,8 @@
 # onecal
 
 One subscribable calendar built from many event sources: Luma calendars, The
-Events Calendar sites (like `usajapan.org`), and any public iCalendar feed.
+Events Calendar sites, any public iCalendar feed, and date-only events kept in
+config.
 
 It fetches each source, normalises events, merges duplicates that appear in more
 than one feed, filters by language, classifies the event type, and serves a
@@ -18,7 +19,9 @@ Built for tracking Bay Area Japan / tech events across:
 - **Keizai Silicon Valley** — `lu.ma/keizai` (live)
 - **Luma — San Francisco** — `lu.ma/sf` (live)
 - **Partiful — San Francisco** — `partiful.com/explore`, SF region (live)
+- **Funcheap — Free SF** — `sf.funcheap.com`, free events only (live)
 - **Frontier Tower SF** — Luma calendar (live)
+- **Japantown / Japan community** — manually curated dates (static)
 
 JCCNC, the Consulate General of Japan in SF, JCCCNC, Japantown Cultural
 District / JAYACon, and JETRO SF publish no machine-readable calendar, so they
@@ -183,6 +186,31 @@ iCal format", Meetup, Proton, Eventbrite event exports, another onecal instance.
 }
 ```
 
+**`static`** — date-only events kept directly in config. Use it for
+organisations that publish dates as plain pages with no feed, and for watch
+dates such as "volunteer signup usually opens". Dates are inclusive; `endDate`
+makes a multi-day event. `status: "TENTATIVE"` marks unconfirmed dates. Each
+event needs a `uid` that is unique within the source.
+
+```json
+{
+  "id": "japantown",
+  "label": "Japantown & Japan community (SF)",
+  "type": "static",
+  "defaultLocation": "San Francisco, CA",
+  "events": [
+    {
+      "uid": "nihonmachi-street-fair-2027",
+      "title": "Nihonmachi Street Fair (53rd)",
+      "date": "2027-08-07",
+      "endDate": "2027-08-08",
+      "url": "https://www.nihonmachistreetfair.org/",
+      "categories": ["festival", "volunteer"]
+    }
+  ]
+}
+```
+
 **`rss`** — RSS 2.0, Atom, or JSON Feed. Dates are read from explicit
 `<startdate>`-style tags, schema.org `Event` JSON-LD, `<time datetime="...">`,
 then the title or description (`Nov 12, 2026 6:30 PM`, `2026年11月12日`, ISO).
@@ -199,6 +227,28 @@ publication time. `durationHours` (default 2) is used when no end is given.
   "durationHours": 2
 }
 ```
+
+**`wordpress`** — discover the latest posts through
+`/wp-json/wp/v2/posts`, then read each post's schema.org `Event` data. This is
+how Funcheap exposes far more events than its ten-item RSS feed. `perPage`
+defaults to 30 (each post is one cached page fetch), `enrich` is required for
+dates, and `freeOnly` keeps only events whose offer price is zero.
+
+```json
+{
+  "id": "funcheap-sf",
+  "label": "Funcheap — Free SF",
+  "type": "wordpress",
+  "baseUrl": "https://sf.funcheap.com",
+  "perPage": 30,
+  "enrich": true,
+  "freeOnly": true,
+  "locationIncludes": ["San Francisco", "SF"]
+}
+```
+
+Only the latest `perPage` posts are inspected; it does not backfill the entire
+archive. Enriched pages are cached for six hours.
 
 Common source fields: `id` (stable, used in URLs and UIDs), `label`, `color`,
 `enabled` (default `true`), `defaultLocation`, `language` to force the language
@@ -245,9 +295,9 @@ it per source if that is wrong.
 ## Event types
 
 Every event is classified into a coarse kind — Hackathon, Conference, Festival /
-Market, Performance / Screening, Workshop, Panel, Talk / Seminar, Networking,
-Social / Party, Meetup, Pitch / Demo, Class, or Other — from its title,
-description, and categories. Titles are weighted above descriptions.
+Market, Performance / Screening, Volunteer, Workshop, Panel, Talk / Seminar,
+Networking, Social / Party, Meetup, Pitch / Demo, Class, or Other — from its
+title, description, and categories. Titles are weighted above descriptions.
 
 - The UI shows a type badge on each event and a **Type** filter
 - `?type=performance` (or repeated/comma-separated values) filters the API and feed
@@ -386,7 +436,7 @@ src/
   feed/            RSS, Atom and JSON Feed parsing
   ics/parse.ts     iCalendar parser (folding, escaping, TZID, RRULE metadata)
   ics/serialize.ts iCalendar writer (folding, escaping, stable UIDs)
-  sources/         ics, luma, partiful, rss, tribe adapters + fetch policy
+  sources/         ics, luma, partiful, rss, static, tribe, wordpress adapters
 scripts/           embedded-config generation for Workers
 web/               dependency-free UI (agenda + month views)
 test/              unit tests

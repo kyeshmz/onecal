@@ -61,6 +61,12 @@ if (command === "check") {
     month: "short",
     day: "numeric",
   });
+  const allDayDateFormat = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
   const timeFormat = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "numeric",
@@ -68,7 +74,7 @@ if (command === "check") {
   });
 
   for (const event of events) {
-    const date = dateFormat.format(event.start);
+    const date = (event.allDay ? allDayDateFormat : dateFormat).format(event.start);
     const time = event.allDay ? "all-day" : timeFormat.format(event.start);
     const languageTag = event.language === "en" ? "" : ` [${languageLabel(event.language)}]`;
     const sources = event.sources.map((source) => `${source.platform}:${source.id}`).join("+");

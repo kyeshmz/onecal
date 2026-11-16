@@ -3,7 +3,7 @@
   "timezone": "America/Los_Angeles",
   "window": {
     "daysBack": 0,
-    "daysAhead": 180
+    "daysAhead": 400
   },
   "cacheTtlSeconds": 900,
   "refreshIntervalSeconds": 300,
@@ -50,6 +50,208 @@
       "region": "SF",
       "locationIncludes": ["San Francisco"],
       "color": "#e11d48"
+    },
+    {
+      "id": "funcheap-sf",
+      "label": "Funcheap — Free SF",
+      "type": "wordpress",
+      "baseUrl": "https://sf.funcheap.com",
+      "perPage": 30,
+      "enrich": true,
+      "freeOnly": true,
+      "locationIncludes": ["San Francisco", "SF"],
+      "color": "#f59e0b"
+    },
+    {
+      "id": "japantown",
+      "label": "Japantown & Japan community (SF)",
+      "type": "static",
+      "color": "#a16207",
+      "defaultLocation": "San Francisco, CA",
+      "events": [
+        {
+          "uid": "japantown-plus-2026-11-20",
+          "title": "Japantown Plus — social networking night",
+          "date": "2026-11-20",
+          "description": "Japantown Cultural District's community networking night at KOHO. Open mic, DJ, mocktails. $5.",
+          "url": "https://japantownculturaldistrict.org/community-events",
+          "organizer": "Japantown Cultural District",
+          "categories": ["community", "networking"]
+        },
+        {
+          "uid": "japanese-language-lounge-2026-11-22",
+          "title": "Japanese Language Lounge",
+          "date": "2026-11-22",
+          "description": "Casual Japanese conversation, all levels. Twice monthly on Sundays; $15.",
+          "url": "https://japantownculturaldistrict.org/community-events",
+          "organizer": "Japantown Cultural District",
+          "categories": ["language", "community"]
+        },
+        {
+          "uid": "jsnc-japan-night-2027",
+          "title": "Japan Night 2027",
+          "date": "2027-01-11",
+          "description": "Japan Society of Northern California's annual Japan Night reception.",
+          "url": "https://www.usajapan.org/events/",
+          "organizer": "Japan Society of Northern California",
+          "categories": ["community", "business"]
+        },
+        {
+          "uid": "watch-cherry-blossom-pitch-2026-12-01",
+          "title": "Pitch window: Cherry Blossom talks/workshops",
+          "date": "2026-12-01",
+          "description": "Pitch a talk or workshop for the April festival. Email info@nccbf.org and volunteer@nccbf.org; programming is usually set by February.",
+          "url": "https://sfcherryblossom.org/",
+          "organizer": "Northern California Cherry Blossom Festival",
+          "categories": ["watch", "speaking"]
+        },
+        {
+          "uid": "watch-cherry-blossom-volunteers-2027-02-01",
+          "title": "Signup watch: Cherry Blossom volunteers",
+          "date": "2027-02-01",
+          "description": "Volunteer signup usually opens 6–8 weeks before the festival. Check sfcherryblossom.org/volunteers or email volunteer@nccbf.org.",
+          "url": "https://sfcherryblossom.org/volunteers/",
+          "organizer": "Northern California Cherry Blossom Festival",
+          "categories": ["watch", "volunteer"]
+        },
+        {
+          "uid": "nccbf-2027-weekend-1",
+          "title": "Northern California Cherry Blossom Festival — weekend 1",
+          "date": "2027-04-10",
+          "endDate": "2027-04-11",
+          "description": "Japantown's largest festival: food booths, performances, Grand Parade. 2027 dates come from third-party calendars; confirm at sfcherryblossom.org.",
+          "url": "https://sfcherryblossom.org/",
+          "organizer": "Northern California Cherry Blossom Festival",
+          "status": "TENTATIVE",
+          "categories": ["festival", "volunteer"]
+        },
+        {
+          "uid": "nccbf-2027-weekend-2",
+          "title": "Northern California Cherry Blossom Festival — weekend 2",
+          "date": "2027-04-17",
+          "endDate": "2027-04-18",
+          "description": "Second weekend, including the Grand Parade. 2027 dates come from third-party calendars; confirm at sfcherryblossom.org.",
+          "url": "https://sfcherryblossom.org/",
+          "organizer": "Northern California Cherry Blossom Festival",
+          "status": "TENTATIVE",
+          "categories": ["festival", "volunteer"]
+        },
+        {
+          "uid": "watch-nihonmachi-pitch-2027-05-01",
+          "title": "Pitch window: Nihonmachi Street Fair",
+          "date": "2027-05-01",
+          "description": "Pitch a talk, performance or demo for the August street fair. Contact via nihonmachistreetfair.org.",
+          "url": "https://www.nihonmachistreetfair.org/",
+          "organizer": "Nihonmachi Street Fair",
+          "categories": ["watch", "speaking"]
+        },
+        {
+          "uid": "jcccnc-childrens-day-2027",
+          "title": "Children's Day (Kodomo no Hi)",
+          "date": "2027-05-05",
+          "description": "JCCCNC school visits, kimono dressing and festival programming. Volunteers needed.",
+          "url": "https://www.jcccnc.org/programs-events/annual-programs/",
+          "organizer": "JCCCNC",
+          "status": "TENTATIVE",
+          "categories": ["culture", "volunteer"]
+        },
+        {
+          "uid": "watch-nihonmachi-volunteers-2027-06-01",
+          "title": "Signup watch: Nihonmachi Street Fair",
+          "date": "2027-06-01",
+          "description": "Volunteer and vendor signup usually opens in June for the August fair. Check nihonmachistreetfair.org.",
+          "url": "https://www.nihonmachistreetfair.org/",
+          "organizer": "Nihonmachi Street Fair",
+          "categories": ["watch", "volunteer"]
+        },
+        {
+          "uid": "watch-tabemasho-pitch-2027-07-01",
+          "title": "Pitch window: TABEMASHO",
+          "date": "2027-07-01",
+          "description": "Offer a talk, demo or auction item for JCCCNC's September fundraiser. Email programsevents@jcccnc.org.",
+          "url": "https://www.jcccnc.org/giving/events-drives/annual-event/",
+          "organizer": "JCCCNC",
+          "categories": ["watch", "speaking"]
+        },
+        {
+          "uid": "watch-tabemasho-volunteers-2027-08-01",
+          "title": "Signup watch: TABEMASHO volunteers",
+          "date": "2027-08-01",
+          "description": "Volunteer and auction-donor signup for the September fundraiser. Email programsevents@jcccnc.org.",
+          "url": "https://www.jcccnc.org/giving/events-drives/annual-event/",
+          "organizer": "JCCCNC",
+          "categories": ["watch", "volunteer"]
+        },
+        {
+          "uid": "nihonmachi-street-fair-2027",
+          "title": "Nihonmachi Street Fair (53rd)",
+          "date": "2027-08-07",
+          "endDate": "2027-08-08",
+          "description": "Two-day Japantown street fair: taiko, food, arts, kids' area. About 40,000 attendees; volunteers needed.",
+          "url": "https://www.nihonmachistreetfair.org/",
+          "organizer": "Nihonmachi Street Fair",
+          "categories": ["festival", "volunteer"]
+        },
+        {
+          "uid": "jcccnc-tabemasho-2027",
+          "title": "TABEMASHO — JCCCNC annual fundraiser",
+          "date": "2027-09-18",
+          "description": "JCCCNC's largest fundraiser. 2026 was Sept 19; 2027 date is tentative. Volunteers, auction items and sponsors needed.",
+          "url": "https://www.jcccnc.org/giving/events-drives/annual-event/",
+          "organizer": "JCCCNC",
+          "status": "TENTATIVE",
+          "categories": ["fundraiser", "volunteer"]
+        },
+        {
+          "uid": "jayacon-2027",
+          "title": "JAYACon — Japantown community convention",
+          "date": "2027-10-02",
+          "description": "Nikkei youth organizations and community leaders; panels and org tables. 2026 was Oct 3; 2027 date tentative.",
+          "url": "https://japantownculturaldistrict.org/community-events",
+          "organizer": "Japantown Cultural District",
+          "status": "TENTATIVE",
+          "categories": ["community"]
+        },
+        {
+          "uid": "jsnc-award-of-honor-gala-2027",
+          "title": "JSNC Award of Honor Gala",
+          "date": "2027-10-08",
+          "description": "Japan Society of Northern California's annual gala. 2026 was Oct 8; 2027 date tentative.",
+          "url": "https://www.usajapan.org/events/",
+          "organizer": "Japan Society of Northern California",
+          "status": "TENTATIVE",
+          "categories": ["business", "community"]
+        },
+        {
+          "uid": "jcccnc-halloween-2027",
+          "title": "Japantown Halloween Carnival",
+          "date": "2027-10-29",
+          "description": "JCCCNC and JCYC: crafts, performances, bounce house, costume parade. Volunteers needed. 2026 was Oct 30; 2027 date tentative.",
+          "url": "https://www.jcccnc.org/programs-events/annual-programs/",
+          "organizer": "JCCCNC",
+          "status": "TENTATIVE",
+          "categories": ["festival", "volunteer"]
+        },
+        {
+          "uid": "watch-mochitsuki-volunteers-2027-11-01",
+          "title": "Signup watch: Mochitsuki volunteers",
+          "date": "2027-11-01",
+          "description": "Volunteer signup for the December mochi-pounding workshops. Email programsevents@jcccnc.org.",
+          "url": "https://www.jcccnc.org/programs-events/annual-programs/",
+          "organizer": "JCCCNC",
+          "categories": ["watch", "volunteer"]
+        },
+        {
+          "uid": "jcccnc-mochitsuki-2027",
+          "title": "Mochitsuki workshops",
+          "date": "2027-12-18",
+          "description": "Mochi-pounding workshops at JCCCNC. 2026 was Dec 19; 2027 date tentative. Volunteers needed.",
+          "url": "https://www.jcccnc.org/programs-events/annual-programs/",
+          "organizer": "JCCCNC",
+          "status": "TENTATIVE",
+          "categories": ["culture", "volunteer"]
+        }
+      ]
     },
     {
       "id": "google-holidays",

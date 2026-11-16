@@ -14,6 +14,8 @@ export interface FeedItem {
   allDay: boolean;
   location?: string;
   categories: string[];
+  /** Set by schema.org enrichment when the page tells us the price. */
+  free?: boolean;
 }
 
 export interface ParseFeedOptions {
@@ -332,7 +334,7 @@ export function parseLooseDate(value: string, timezone: string): ParsedDate | un
   }
 
   const numeric =
-    /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b(?:[^\d]{0,10}(\d{1,2}):(\d{2})\s*(am|pm)?)?/i.exec(text);
+    /\b(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b(?:[^\d]{0,10}(\d{1,2}):(\d{2})\s*(am|pm)?)?/i.exec(text);
   if (numeric) {
     const hour = numeric[4] ? Number(numeric[4]) : undefined;
     const meridiem = numeric[6]?.toLowerCase();
@@ -344,8 +346,9 @@ export function parseLooseDate(value: string, timezone: string): ParsedDate | un
           : meridiem === "am" && hour === 12
             ? 0
             : hour;
+    const year = Number(numeric[3]);
     const parsed = buildDate(
-      Number(numeric[3]),
+      year < 100 ? 2000 + year : year,
       Number(numeric[1]),
       Number(numeric[2]),
       adjustedHour === undefined ? undefined : { hour: adjustedHour, minute: Number(numeric[5] ?? 0), second: 0 },
@@ -397,13 +400,18 @@ function parseAbsoluteDate(value: string): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-interface JsonLdEvent {
+export interface JsonLdEventDetails {
+  name?: string;
+  description?: string;
   startDate?: string;
   endDate?: string;
   location?: string;
+  url?: string;
+  isFree?: boolean;
 }
 
-function extractJsonLdEvent(raw: string): JsonLdEvent | undefined {
+/** Extract a schema.org Event from JSON-LD embedded in an event page. */
+export function extractJsonLdEvent(raw: string): JsonLdEventDetails | undefined {
   const scripts = raw.matchAll(
     /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   );
@@ -437,15 +445,46 @@ function findEventObject(value: unknown): Record<string, unknown> | undefined {
   return undefined;
 }
 
-function toJsonLdEvent(record: Record<string, unknown>): JsonLdEvent {
-  const event: JsonLdEvent = {};
+function toJsonLdEvent(record: Record<string, unknown>): JsonLdEventDetails {
+  const event: JsonLdEventDetails = {};
+  const name = cleanText(stringValue(record.name) ?? "");
+  const description = cleanText(stringValue(record.description) ?? "");
   const startDate = stringValue(record.startDate);
   const endDate = stringValue(record.endDate);
   const location = locationName(record.location);
+  const url = stringValue(record.url);
+  const isFree = freeStatus(record);
+
+  if (name) event.name = name;
+  if (description) event.description = description;
   if (startDate) event.startDate = startDate;
   if (endDate) event.endDate = endDate;
   if (location) event.location = location;
+  if (url) event.url = url;
+  if (isFree !== undefined) event.isFree = isFree;
   return event;
+}
+
+/** true when a schema.org Offer is priced at zero, false when priced above zero. */
+function freeStatus(record: Record<string, unknown>): boolean | undefined {
+  const accessible = record.isAccessibleForFree;
+  if (accessible === true) return true;
+  if (accessible === false) return false;
+
+  const offers = record.offers;
+  const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
+  let sawPrice = false;
+
+  for (const offer of list) {
+    if (!offer || typeof offer !== "object") continue;
+    const price = (offer as Record<string, unknown>).price;
+    if (price === undefined || price === null || price === "") continue;
+    sawPrice = true;
+    const value = typeof price === "number" ? price : Number.parseFloat(String(price));
+    if (Number.isFinite(value) && value === 0) return true;
+  }
+
+  return sawPrice ? false : undefined;
 }
 
 function locationName(value: unknown): string | undefined {
@@ -454,16 +493,24 @@ function locationName(value: unknown): string | undefined {
   if (!value || typeof value !== "object") return undefined;
 
   const record = value as Record<string, unknown>;
-  if (typeof record.name === "string") return record.name;
-  if (typeof record.address === "string") return record.address;
-  if (record.address && typeof record.address === "object") {
-    const address = record.address as Record<string, unknown>;
-    const parts = [address.streetAddress, address.addressLocality, address.addressRegion].filter(
-      (part): part is string => typeof part === "string",
-    );
-    if (parts.length > 0) return parts.join(", ");
+  const name = typeof record.name === "string" ? record.name : undefined;
+  let address: string | undefined;
+
+  if (typeof record.address === "string") {
+    address = record.address;
+  } else if (record.address && typeof record.address === "object") {
+    const fields = record.address as Record<string, unknown>;
+    const parts = [
+      fields.streetAddress,
+      fields.addressLocality,
+      fields.addressRegion,
+      fields.postalCode,
+    ].filter((part): part is string => typeof part === "string");
+    if (parts.length > 0) address = parts.join(", ");
   }
-  return undefined;
+
+  if (name && address) return `${name}, ${address}`;
+  return name ?? address;
 }
 
 function parseJsonLoose(value: string): unknown {

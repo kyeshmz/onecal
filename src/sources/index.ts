@@ -4,7 +4,9 @@ import { fetchIcs } from "./fetch.js";
 import { loadLumaSource } from "./luma.js";
 import { loadPartifulSource } from "./partiful.js";
 import { loadRssSource } from "./rss.js";
+import { loadStaticSource } from "./static.js";
 import { loadTribeSource, type SourceLoadOptions } from "./tribe.js";
+import { loadWordpressSource } from "./wordpress.js";
 
 export type { SourceLoadOptions };
 
@@ -23,6 +25,10 @@ export async function loadSourceEvents(
       return loadRssSource(source, options);
     case "tribe":
       return loadTribeSource(source, options);
+    case "static":
+      return loadStaticSource(source);
+    case "wordpress":
+      return loadWordpressSource(source, options);
   }
 }
 

@@ -1,4 +1,4 @@
-export type SourceType = "ics" | "luma" | "partiful" | "rss" | "tribe";
+export type SourceType = "ics" | "luma" | "partiful" | "rss" | "tribe" | "static" | "wordpress";
 
 export interface SourceBase {
   /** Stable id used in URLs, UIDs and the UI. */
@@ -46,6 +46,10 @@ export interface RssSourceConfig extends SourceBase {
   usePublishedDate?: boolean;
   /** Duration for items without an explicit end (hours). */
   durationHours?: number;
+  /** Fetch each item's page and read its schema.org Event data. */
+  enrich?: boolean;
+  /** Keep only events whose schema.org offer is free. */
+  freeOnly?: boolean;
 }
 
 export interface PartifulSourceConfig extends SourceBase {
@@ -56,12 +60,48 @@ export interface PartifulSourceConfig extends SourceBase {
   url?: string;
 }
 
+/** A date-only event that lives in config because the organiser has no feed. */
+export interface StaticEventConfig {
+  /** Stable id, unique within the source. */
+  uid: string;
+  title: string;
+  /** Inclusive start date, YYYY-MM-DD. */
+  date: string;
+  /** Inclusive end date. Omit for a single-day event. */
+  endDate?: string;
+  description?: string;
+  location?: string;
+  url?: string;
+  organizer?: string;
+  status?: EventStatus;
+  categories?: string[];
+  rrule?: string;
+}
+
+export interface StaticSourceConfig extends SourceBase {
+  type: "static";
+  events: StaticEventConfig[];
+}
+
+export interface WordpressSourceConfig extends SourceBase {
+  type: "wordpress";
+  /** Site root, e.g. https://sf.funcheap.com. */
+  baseUrl: string;
+  /** Posts to inspect (1–100). Each is enriched from its schema.org Event data. */
+  perPage?: number;
+  enrich?: boolean;
+  freeOnly?: boolean;
+  durationHours?: number;
+}
+
 export type SourceConfig =
   | IcsSourceConfig
   | LumaSourceConfig
   | TribeSourceConfig
   | RssSourceConfig
-  | PartifulSourceConfig;
+  | PartifulSourceConfig
+  | StaticSourceConfig
+  | WordpressSourceConfig;
 
 export interface WindowConfig {
   daysBack?: number;
