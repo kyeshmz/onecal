@@ -46,6 +46,8 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sr-only {
@@ -270,7 +272,7 @@ summary:focus-visible {
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
 .chip[aria-pressed="true"] {
@@ -338,7 +340,7 @@ summary:focus-visible {
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
 .segment.is-active {
@@ -417,7 +419,8 @@ summary:focus-visible {
   gap: 14px;
   background: var(--panel);
   padding: 14px 16px;
-  transition: background 120ms ease;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
 }
 
 .event:hover {
@@ -514,23 +517,65 @@ summary:focus-visible {
   margin-left: 1px;
 }
 
-.event-details {
-  margin-top: 7px;
-  color: var(--muted);
-  font-size: 13px;
+/* Motion ----------------------------------------------------------------- */
+
+@keyframes view-in {
+  from {
+    opacity: 0.55;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.event-details summary {
-  cursor: pointer;
-  width: fit-content;
-  font-size: 12px;
-  color: var(--muted);
+.agenda.view-enter {
+  animation: view-in 200ms ease-out;
 }
 
-.event-details p {
-  margin: 6px 0 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+@keyframes month-next {
+  from {
+    opacity: 0.35;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes month-prev {
+  from {
+    opacity: 0.35;
+    transform: translateX(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0.7;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Month view ------------------------------------------------------------- */
@@ -574,6 +619,7 @@ summary:focus-visible {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
 }
 
 .month-nav button:hover {
@@ -605,6 +651,16 @@ summary:focus-visible {
   border-radius: var(--radius);
   background: var(--line);
   box-shadow: var(--shadow);
+  touch-action: pan-y;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.month.is-next .month-grid {
+  animation: month-next 240ms cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+.month.is-prev .month-grid {
+  animation: month-prev 240ms cubic-bezier(0.22, 0.8, 0.28, 1);
 }
 
 .day-cell {
@@ -622,7 +678,7 @@ summary:focus-visible {
   text-align: left;
   cursor: pointer;
   overflow: hidden;
-  transition: background 120ms ease;
+  transition: background 120ms ease, transform 120ms ease;
 }
 
 .day-cell:hover {
@@ -702,6 +758,7 @@ summary:focus-visible {
   flex-direction: column;
   gap: 10px;
   margin-top: 6px;
+  animation: detail-in 180ms ease-out;
 }
 
 .day-detail-head {
@@ -723,7 +780,86 @@ summary:focus-visible {
   font-size: 12px;
 }
 
-/* Empty + loading -------------------------------------------------------- */
+.event-more {
+  appearance: none;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.event-more:hover {
+  text-decoration: underline;
+}
+
+.event-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Event dialog ----------------------------------------------------------- */
+
+.event-dialog {
+  width: min(580px, calc(100vw - 32px));
+  max-height: min(86vh, 780px);
+  overflow: auto;
+}
+
+.event-dialog-kicker {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-dialog h2 {
+  margin: 8px 0 0;
+  font-family: ui-serif, "Iowan Old Style", Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.event-dialog-when {
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.event-dialog-location {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.event-dialog .event-tags {
+  margin: 14px 0;
+}
+
+.event-dialog-description {
+  margin: 0 0 18px;
+  max-height: 38vh;
+  overflow: auto;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.event-dialog .btn.wide {
+  margin-bottom: 8px;
+}
 
 .empty {
   border: 1px dashed var(--line);
@@ -1085,6 +1221,59 @@ summary:focus-visible {
   .day-detail-head h3 {
     font-size: 16px;
   }
+
+  .dialog {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px calc(18px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+    animation: sheet-up 260ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  }
+
+  .dialog::before {
+    content: "";
+    display: block;
+    width: 38px;
+    height: 4px;
+    margin: -8px auto 12px;
+    border-radius: 999px;
+    background: var(--line);
+  }
+
+  .dialog::backdrop {
+    backdrop-filter: blur(2px);
+  }
+
+  .event-dialog {
+    max-height: 90vh;
+  }
+
+  .chips {
+    scroll-snap-type: x proximity;
+  }
+
+  .chip {
+    scroll-snap-align: start;
+  }
+}
+
+@media (hover: none) {
+  .event:active {
+    transform: scale(0.995);
+  }
+
+  .chip:active,
+  .btn:active,
+  .segment:active,
+  .month-nav button:active,
+  .day-cell:active {
+    transform: scale(0.97);
+  }
 }
 
 @media (max-width: 520px) {
@@ -1098,7 +1287,11 @@ summary:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
   }
 }

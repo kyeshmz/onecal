@@ -10,7 +10,9 @@ const state = {
   eventType: "",
   view: "agenda",
   monthCursor: monthStart(new Date()),
+  monthMotion: null,
   selectedDay: null,
+  lastSwipeAt: 0,
   generatedAt: null,
   excludedCount: 0,
   initialized: false,
@@ -38,6 +40,14 @@ const els = {
   webcalLink: document.getElementById("webcal-link"),
   copyFeed: document.getElementById("copy-feed"),
   closeDialog: document.getElementById("close-dialog"),
+  eventDialog: document.getElementById("event-dialog"),
+  eventDialogKicker: document.getElementById("event-dialog-kicker"),
+  eventDialogTitle: document.getElementById("event-dialog-title"),
+  eventDialogWhen: document.getElementById("event-dialog-when"),
+  eventDialogLocation: document.getElementById("event-dialog-location"),
+  eventDialogTags: document.getElementById("event-dialog-tags"),
+  eventDialogDescription: document.getElementById("event-dialog-description"),
+  eventDialogLink: document.getElementById("event-dialog-link"),
 };
 
 const FEED_URL = new URL("/feed.ics", window.location.href).toString();
@@ -366,6 +376,7 @@ function updateViewToggle() {
 }
 
 function setView(view) {
+  if (state.view === view) return;
   state.view = view;
   if (view === "month") {
     if (!state.selectedDay) state.selectedDay = todayKey();
@@ -378,7 +389,18 @@ function setView(view) {
   window.history.replaceState(null, "", url);
 
   render();
+  animateView();
 }
+
+function animateView() {
+  els.agenda.classList.remove("view-enter");
+  void els.agenda.offsetWidth;
+  els.agenda.classList.add("view-enter");
+}
+
+els.agenda.addEventListener("animationend", () => {
+  els.agenda.classList.remove("view-enter");
+});
 
 function renderAgenda(filtered) {
   if (filtered.length === 0) {
@@ -437,10 +459,13 @@ function renderMonth(events) {
     else byDay.set(key, [event]);
   }
 
+  const motion = state.monthMotion;
+  state.monthMotion = null;
   const month = state.monthCursor;
   const today = todayKey();
   const section = document.createElement("section");
   section.className = "month";
+  if (motion) section.classList.add(`is-${motion}`);
 
   const head = document.createElement("div");
   head.className = "month-head";
@@ -451,21 +476,14 @@ function renderMonth(events) {
   const nav = document.createElement("div");
   nav.className = "month-nav";
   nav.append(
-    monthButton("‹", "Previous month", () => {
-      state.monthCursor = addMonths(month, -1);
-      state.selectedDay = null;
-      render();
-    }),
+    monthButton("‹", "Previous month", () => changeMonth(-1, "prev")),
     monthButton("Today", "Go to today", () => {
       state.monthCursor = monthStart(new Date());
       state.selectedDay = todayKey();
+      state.monthMotion = null;
       render();
     }),
-    monthButton("›", "Next month", () => {
-      state.monthCursor = addMonths(month, 1);
-      state.selectedDay = null;
-      render();
-    }),
+    monthButton("›", "Next month", () => changeMonth(1, "next")),
   );
   head.append(title, nav);
   section.append(head);
@@ -541,6 +559,7 @@ function renderMonth(events) {
     cell.append(mini);
 
     cell.addEventListener("click", () => {
+      if (Date.now() - state.lastSwipeAt < 350) return;
       const wasOutside = date.getMonth() !== month.getMonth();
       state.selectedDay = key;
       if (wasOutside) state.monthCursor = monthStart(date);
@@ -558,6 +577,7 @@ function renderMonth(events) {
     grid.append(cell);
   }
 
+  attachMonthSwipe(grid);
   section.append(grid);
 
   if (state.selectedDay) {
@@ -607,6 +627,64 @@ function monthButton(label, ariaLabel, onClick) {
   button.setAttribute("aria-label", ariaLabel);
   button.addEventListener("click", onClick);
   return button;
+}
+
+function changeMonth(delta, motion) {
+  state.monthCursor = addMonths(state.monthCursor, delta);
+  state.selectedDay = null;
+  state.monthMotion = motion;
+  render();
+}
+
+/** Horizontal swipe on the month grid changes months without blocking vertical scroll. */
+function attachMonthSwipe(grid) {
+  let active = false;
+  let startX = 0;
+  let startY = 0;
+  let dx = 0;
+  let dy = 0;
+
+  grid.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch") return;
+    active = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    dx = 0;
+    dy = 0;
+    grid.style.transition = "none";
+    try {
+      grid.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is best-effort.
+    }
+  });
+
+  grid.addEventListener("pointermove", (event) => {
+    if (!active) return;
+    dx = event.clientX - startX;
+    dy = event.clientY - startY;
+
+    if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+      grid.style.transform = `translateX(${Math.max(-80, Math.min(80, dx * 0.28))}px)`;
+      grid.style.opacity = String(1 - Math.min(Math.abs(dx) / 520, 0.16));
+    }
+  });
+
+  const finish = () => {
+    if (!active) return;
+    active = false;
+    grid.style.transition = "";
+    grid.style.transform = "";
+    grid.style.opacity = "";
+
+    if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+      state.lastSwipeAt = Date.now();
+      changeMonth(dx < 0 ? 1 : -1, dx < 0 ? "next" : "prev");
+    }
+  };
+
+  grid.addEventListener("pointerup", finish);
+  grid.addEventListener("pointercancel", finish);
 }
 
 /** Keep the subscribe link in step with the language filter. */
@@ -766,12 +844,34 @@ function renderEvent(event) {
 
   const tags = document.createElement("div");
   tags.className = "event-tags";
+  tags.append(...buildEventTags(event));
+  if (tags.childElementCount > 0) body.append(tags);
+
+  const more = document.createElement("button");
+  more.type = "button";
+  more.className = "event-more";
+  more.textContent = "View details";
+  more.setAttribute("aria-label", `View details for ${event.title}`);
+  more.addEventListener("click", () => openEventDialog(event));
+  body.append(more);
+
+  article.addEventListener("click", (clickEvent) => {
+    if (clickEvent.target.closest("a, button, summary")) return;
+    openEventDialog(event);
+  });
+
+  article.append(body);
+  return article;
+}
+
+function buildEventTags(event) {
+  const tags = [];
 
   if (event.eventType && event.eventType !== "other") {
     const tag = document.createElement("span");
     tag.className = "tag event-type";
     tag.textContent = eventTypeLabel(event.eventType);
-    tags.append(tag);
+    tags.push(tag);
   }
 
   if (event.language && event.language !== "en") {
@@ -779,7 +879,7 @@ function renderEvent(event) {
     tag.className = "tag lang";
     tag.textContent = event.language.toUpperCase();
     tag.title = LANGUAGE_LABELS[event.language] ?? event.language;
-    tags.append(tag);
+    tags.push(tag);
   }
 
   for (const source of event.sources ?? []) {
@@ -796,24 +896,77 @@ function renderEvent(event) {
     platform.textContent = PLATFORM_LABELS[source.platform] ?? source.platform ?? "";
 
     tag.append(dot, label, platform);
-    tags.append(tag);
+    tags.push(tag);
   }
 
-  if (tags.childElementCount > 0) body.append(tags);
+  return tags;
+}
 
-  if (event.description) {
-    const details = document.createElement("details");
-    details.className = "event-details";
-    const summary = document.createElement("summary");
-    summary.textContent = "Details";
-    const text = document.createElement("p");
-    text.textContent = event.description;
-    details.append(summary, text);
-    body.append(details);
+function openEventDialog(event) {
+  const platform = event.sources[0]?.platform;
+  const type = event.eventType && event.eventType !== "other" ? eventTypeLabel(event.eventType) : "Event";
+  const platformText = PLATFORM_LABELS[platform] ?? "";
+
+  els.eventDialogKicker.textContent = platformText ? `${type} · ${platformText}` : type;
+  els.eventDialogTitle.textContent = event.title;
+  els.eventDialogWhen.textContent = formatEventWhen(event);
+
+  const meta = [event.location, event.organizer].filter(Boolean).join(" · ");
+  els.eventDialogLocation.textContent = meta;
+  els.eventDialogLocation.hidden = !meta;
+
+  els.eventDialogTags.replaceChildren(...buildEventTags(event));
+  els.eventDialogDescription.textContent =
+    event.description || "No description provided for this event.";
+
+  if (isHttpUrl(event.url)) {
+    els.eventDialogLink.hidden = false;
+    els.eventDialogLink.href = event.url;
+    els.eventDialogLink.textContent = `${eventLinkLabel(platform)} ↗`;
+  } else {
+    els.eventDialogLink.hidden = true;
+    els.eventDialogLink.removeAttribute("href");
   }
 
-  article.append(body);
-  return article;
+  if (typeof els.eventDialog.showModal === "function") els.eventDialog.showModal();
+}
+
+function formatEventWhen(event) {
+  if (event.allDay) {
+    const startKey = event.start.slice(0, 10);
+    const startDate = new Date(`${startKey}T12:00:00`);
+    const endKey = event.end.slice(0, 10);
+
+    if (endKey && endKey > startKey) {
+      const last = new Date(`${endKey}T12:00:00`);
+      last.setDate(last.getDate() - 1);
+      if (dayKeyFromDate(last) !== startKey) {
+        return `${longDateFormatter.format(startDate)} – ${longDateFormatter.format(last)} · All day`;
+      }
+    }
+
+    return `${longDateFormatter.format(startDate)} · All day`;
+  }
+
+  const start = new Date(event.start);
+  const end = new Date(event.end);
+  const date = longDateFormatter.format(start);
+
+  if (Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+    return `${date} · ${timeFormatter.format(start)}`;
+  }
+
+  if (localDayKey(event.end) === localDayKey(event.start)) {
+    return `${date} · ${timeFormatter.format(start)} – ${timeFormatter.format(end)}`;
+  }
+
+  return `${date} ${timeFormatter.format(start)} – ${longDateFormatter.format(end)} ${timeFormatter.format(end)}`;
+}
+
+function eventLinkLabel(platform) {
+  if (platform === "luma") return "Open on Luma";
+  if (platform === "partiful") return "Open on Partiful";
+  return "Open event page";
 }
 
 function relativeDayLabel(key) {
@@ -880,6 +1033,10 @@ els.subscribe.addEventListener("click", () => {
   else window.location.href = currentFeedUrl;
 });
 els.closeDialog.addEventListener("click", () => els.dialog.close());
+
+els.eventDialog.addEventListener("click", (event) => {
+  if (event.target === els.eventDialog) els.eventDialog.close();
+});
 
 document.addEventListener("keydown", (event) => {
   const target = event.target;

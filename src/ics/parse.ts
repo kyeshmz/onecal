@@ -138,8 +138,9 @@ export function extractEvents(
     if (description) event.description = description;
     if (location) event.location = location;
     if (organizer) event.organizer = organizer;
-    const url = getPropertyValue(component, "URL")?.trim();
-    if (url && /^https?:\/\//i.test(url)) event.url = url;
+    const url =
+      firstHttpUrl(getPropertyValue(component, "URL") ?? "") ?? firstHttpUrl(description);
+    if (url) event.url = url;
     if (rrule) event.rrule = rrule;
     if (recurrenceId) event.recurrenceId = recurrenceId.date;
 
@@ -349,6 +350,12 @@ function parseDuration(value: string): number | undefined {
     Number(minutes ?? 0) * 60_000 +
     Number(seconds ?? 0) * 1_000;
   return sign === "-" ? -total : total;
+}
+
+/** Many feeds (including Luma) put the event page in the description, not URL. */
+function firstHttpUrl(text: string): string | undefined {
+  const match = /https?:\/\/[^\s<>"'\])]+/i.exec(text);
+  return match ? match[0].replace(/[.,;:]+$/, "") : undefined;
 }
 
 function normalizeStatus(value: string | undefined): EventStatus {

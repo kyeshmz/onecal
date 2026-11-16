@@ -107,6 +107,22 @@ test("captures recurrence, exdates and exception instances", () => {
   assert.equal(events[1]?.recurrenceId?.toISOString(), "2026-01-12T19:00:00.000Z");
 });
 
+test("falls back to a URL in the description", () => {
+  const events = extract([
+    "BEGIN:VCALENDAR",
+    "BEGIN:VEVENT",
+    "UID:luma-event",
+    "DTSTART:20261118T190000Z",
+    "DTEND:20261118T210000Z",
+    "SUMMARY:Luma meetup",
+    "DESCRIPTION:Get up-to-date information at: https://luma.com/duckh0l3\\n\\nAddress:\\nCheck event page.",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]);
+
+  assert.equal(events[0]?.url, "https://luma.com/duckh0l3");
+});
+
 test("serializes a feed that round-trips through the parser", () => {
   const start = new Date("2026-11-17T19:30:00Z");
   const event: CalendarEvent = {

@@ -314,6 +314,14 @@ The UI has two views:
   events below. On phones the grid switches to colored dots and tapping a day
   scrolls to that day's list.
 
+Click or tap any event card to open a detail sheet with the full description,
+venue, tags, and a button to the original Luma/Partiful/event page. Event titles
+are direct links too.
+
+On phones, swipe the month grid left or right to change months; the grid slides
+to the new month. The detail sheet rises from the bottom, cards and chips have
+touch feedback, and all motion respects `prefers-reduced-motion`.
+
 `?view=month` opens the month view directly. The layout is responsive down to
 390px.
 
