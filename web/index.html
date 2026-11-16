@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>onecal — one calendar for everything</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="3" y="6" width="34" height="31" rx="8" fill="currentColor" opacity="0.14" />
+            <rect x="3" y="14" width="34" height="23" rx="8" fill="currentColor" opacity="0.18" />
+            <path d="M3 18a8 8 0 0 1 8-8h18a8 8 0 0 1 8 8H3Z" fill="currentColor" />
+            <circle cx="14" cy="26" r="2.6" fill="currentColor" />
+            <circle cx="26" cy="26" r="2.6" fill="currentColor" opacity="0.55" />
+          </svg>
+          <div>
+            <h1>onecal</h1>
+            <p id="tagline">Every calendar, one feed.</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="refresh" class="btn ghost" type="button">Refresh</button>
+          <button id="subscribe" class="btn primary" type="button">Subscribe</button>
+        </div>
+      </header>
+
+      <section class="controls" aria-label="Filters">
+        <label class="search">
+          <span class="sr-only">Search events</span>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+            <path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          <input
+            id="search"
+            type="search"
+            placeholder="Search events, venues, organizers"
+            autocomplete="off"
+          />
+          <kbd>/</kbd>
+        </label>
+        <label class="select">
+          <span>Language</span>
+          <select id="language">
+            <option value="">All</option>
+          </select>
+        </label>
+      </section>
+
+      <nav id="sources" class="chips" aria-label="Calendar sources"></nav>
+
+      <div id="banner" class="banner" role="status" hidden></div>
+      <p id="status" class="status" aria-live="polite">Loading events…</p>
+
+      <main id="agenda" class="agenda">
+        <p class="empty">Loading events…</p>
+      </main>
+
+      <section id="watchlist" class="watchlist" hidden>
+        <h2>Not connected yet</h2>
+        <p class="muted">
+          These organisations have no public calendar feed, so they are tracked here instead of
+          being silently dropped.
+        </p>
+        <ul id="watchlist-items"></ul>
+      </section>
+
+      <footer class="footer">
+        <span class="footer-label">Feed</span>
+        <code id="feed-url">/feed.ics</code>
+        <button id="copy" class="link" type="button">Copy</button>
+      </footer>
+    </div>
+
+    <dialog id="subscribe-dialog" class="dialog">
+      <div class="dialog-head">
+        <h2>Subscribe</h2>
+        <form method="dialog">
+          <button class="icon-btn" aria-label="Close">×</button>
+        </form>
+      </div>
+      <p class="muted">
+        Add this one feed to any calendar app. It refreshes as the sources publish new events.
+      </p>
+      <a id="webcal-link" class="btn primary wide" href="/feed.ics">Add to Apple Calendar</a>
+      <label class="field">
+        <span>Feed URL</span>
+        <div class="copy-row">
+          <input id="feed-input" readonly />
+          <button id="copy-feed" class="btn" type="button">Copy</button>
+        </div>
+      </label>
+      <div class="hint">
+        <p><strong>Google Calendar</strong> — Other calendars → From URL, then paste the feed URL.</p>
+        <p><strong>Outlook</strong> — Add calendar → Subscribe from web.</p>
+      </div>
+      <form method="dialog">
+        <button class="btn ghost wide" type="button" id="close-dialog">Done</button>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "onecal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aggregate Luma, The Events Calendar sites and any ICS feed into one subscribable calendar.",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc",
+    "serve": "node dist/server.js",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "tsx src/cli.ts check",
+    "list": "tsx src/cli.ts list"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

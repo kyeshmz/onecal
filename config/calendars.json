@@ -1,0 +1,81 @@
+{
+  "feedName": "Bay Area Japan + Tech",
+  "timezone": "America/Los_Angeles",
+  "window": {
+    "daysBack": 0,
+    "daysAhead": 180
+  },
+  "cacheTtlSeconds": 900,
+  "languages": {
+    "exclude": []
+  },
+  "sources": [
+    {
+      "id": "usajapan",
+      "label": "Japan Society of Northern California",
+      "type": "tribe",
+      "baseUrl": "https://www.usajapan.org/events/",
+      "color": "#c2413b"
+    },
+    {
+      "id": "keizai",
+      "label": "Keizai Silicon Valley",
+      "type": "luma",
+      "calendarId": "cal-DzmjnQ7XXUSP6Gi",
+      "color": "#1f6f5c"
+    },
+    {
+      "id": "frontier-tower",
+      "label": "Frontier Tower SF",
+      "type": "luma",
+      "calendarId": "cal-Sl7q1nHTRXQzjP2",
+      "color": "#5b6cff"
+    },
+    {
+      "id": "luma-example",
+      "label": "Add another Luma calendar",
+      "type": "luma",
+      "url": "https://lu.ma/your-calendar-slug",
+      "color": "#8b5cf6",
+      "enabled": false,
+      "language": "en"
+    },
+    {
+      "id": "google-holidays",
+      "label": "US Holidays (Google Calendar ICS)",
+      "type": "ics",
+      "url": "https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics",
+      "color": "#0f766e",
+      "enabled": false
+    }
+  ],
+  "watchlist": [
+    {
+      "label": "Japanese Chamber of Commerce of Northern California",
+      "url": "https://www.jccnc.org/past-events",
+      "contact": "mail@jccnc.org",
+      "note": "Wix Events site plus Eventbrite ticketing; no public ICS or JSON feed. Event pages are mostly Japanese-language."
+    },
+    {
+      "label": "Consulate General of Japan in San Francisco",
+      "url": "https://www.sf.us.emb-japan.go.jp/itpr_en/index.html",
+      "note": "Cultural and tech programmes are posted as news articles; the site blocks automated fetches and publishes no ICS."
+    },
+    {
+      "label": "JCCCNC / The Center (Japantown)",
+      "url": "https://www.jcccnc.org/",
+      "note": "Community-centre workshops and special programmes; the site was unreachable from here and exposes no public calendar feed."
+    },
+    {
+      "label": "Japantown Cultural District / JAYACon",
+      "url": "https://www.japantowntaskforce.org/",
+      "contact": "info@japantowntaskforce.org",
+      "note": "Squarespace site without an events collection or ICS endpoint; community panels are announced as pages."
+    },
+    {
+      "label": "JETRO San Francisco",
+      "url": "https://www.jetro.go.jp/en/jetro/worldwide/usa/san-francisco/",
+      "note": "Japan startup and innovation events; the site returns 403 to automated requests and offers no ICS."
+    }
+  ]
+}
